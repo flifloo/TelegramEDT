@@ -1,15 +1,21 @@
-import logging, shelve, datetime, hashlib, asyncio
+import asyncio
+import datetime
+import hashlib
+import logging
+import shelve
+from asyncio import sleep
+from os import mkdir
+from os.path import isdir, isfile
+from threading import RLock
+
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.types import InlineQuery, InputTextMessageContent, InlineQueryResultArticle, ParseMode, reply_keyboard
 from aiogram.utils import markdown
+from aiogram.utils.exceptions import MessageIsTooLong
 from ics import Calendar
 from ics.parse import ParseError
 from requests import get
 from requests.exceptions import ConnectionError, InvalidSchema, MissingSchema
-from threading import RLock
-from asyncio import sleep
-from os import mkdir
-from os.path import isdir, isfile
 
 
 if not isdir("logs"):
@@ -291,8 +297,26 @@ async def get_id(message: types.Message):
 async def get_logs(message: types.Message):
     logger.info(f"{message.from_user.username} do getlog command: {message.text}")
     if message.from_user.id == ADMIN_ID:
-        await message.chat.do(types.ChatActions.UPLOAD_DOCUMENT)
-        await message.reply_document(types.InputFile(f"logs/{log_date}.log"), caption=f"The {log_date} logs")
+        try:
+            int(message.text[9:])
+        except ValueError:
+            await message.chat.do(types.ChatActions.UPLOAD_DOCUMENT)
+            await message.reply_document(types.InputFile(f"logs/{log_date}.log"), caption=f"The {log_date} logs")
+        else:
+            await message.chat.do(types.ChatActions.TYPING)
+            logs = (open(f"logs/{log_date}.log", "r").readlines())[-int(message.text[9:]):]
+            log = str()
+            for i in logs:
+                log += i
+            msg = markdown.text(
+                markdown.italic("logs:"),
+                markdown.code(log),
+                sep="\n"
+            )
+            try:
+                await message.reply(msg, parse_mode=ParseMode.MARKDOWN)
+            except MessageIsTooLong:
+                await message.reply(markdown.bold("Too much logs ! ❌"))
 
 
 @dp.errors_handler()
