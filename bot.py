@@ -70,8 +70,8 @@ async def notif():
 
 
 @dp.inline_handler()
-async def inline_echo(inline_query: InlineQuery):
-    text = inline_query.query.lower() if inline_query.query.lower() not in TIMES else "invalid"
+async def inline_edt(inline_query: InlineQuery):
+    text = inline_query.query.lower() if inline_query.query.lower() in TIMES else "invalid"
     res = calendar(text, inline_query.from_user.id)
     input_content = InputTextMessageContent(res, parse_mode=ParseMode.MARKDOWN)
     result_id: str = hashlib.md5(res.encode()).hexdigest()
