@@ -13,6 +13,8 @@ from aiogram.types import InlineQuery, InputTextMessageContent, InlineQueryResul
 from aiogram.utils import markdown
 from aiogram.utils.exceptions import MessageIsTooLong
 from EDTcalendar import Calendar
+from EDTuser import User
+from lang import lang
 from ics.parse import ParseError
 from requests.exceptions import ConnectionError, InvalidSchema, MissingSchema
 
@@ -40,14 +42,19 @@ dp = Dispatcher(bot)
 dbL = RLock()
 
 
+def get_now():
+    return datetime.datetime.now(datetime.timezone.utc).astimezone(tz=None)
+
+
 def calendar(time: str, user_id: int):
     with dbL:
         with shelve.open("edt", writeback=True) as db:
-            if str(user_id) not in db or "resources" not in db[str(user_id)]:
-                return markdown.bold("Your EDT is not set ! ❌")
+            user = db[str(user_id)]
+            if not user.resources:
+                return lang(user, "edt_err_set")
             elif time not in TIMES:
-                return markdown.bold("Invalid choice ! ❌")
-            return str(Calendar(time, db[str(user_id)]["resources"]))
+                return lang(user, "edt_err_choice")
+            return str(user.calendar(time))
 
 
 async def notif():
@@ -55,16 +62,13 @@ async def notif():
         with dbL:
             with shelve.open("edt", writeback=True) as db:
                 for u in db:
-                    if ("resources" in db[u]) and ("notif" in db[u]) and (db[u]["notif"]["state"]):
-                        logger.info(f"notif check for {u}")
-                        now = datetime.datetime.now(datetime.timezone.utc).astimezone(tz=None)
-                        c = Calendar("day", db[u]["resources"], pass_week=False)
+                    if db[u].resources and db[u].nt:
+                        now = get_now()
+                        c = db[u].calendar(pass_week=True)
                         for e in c.timeline:
-                            logger.info(f"{(e.begin - now).total_seconds().__abs__()//60.} <= {db[u]['notif']['time']} and {(now - db[u]['notif']['last']).total_seconds()//60} | >= {db[u]['notif']['cooldown']}")
-                            logger.info(f"{(e.begin - now).total_seconds().__abs__()//60 <= db[u]['notif']['time']} and {(now - db[u]['notif']['last']).total_seconds()//60 >= db[u]['notif']['cooldown']}")
-                            if (e.begin - now).total_seconds().__abs__()//60 <= db[u]["notif"]["time"] and\
-                                    (now - db[u]["notif"]["last"]).total_seconds()//60 >= db[u]["notif"]["cooldown"]:
-                                db[u]["notif"]["last"] = now
+                            if 0 <= (e.begin - now).total_seconds().__abs__()//60 <= db[u].nt_time and \
+                                    0 <= (now - db[u].nt_last).total_seconds()//60 >= db[u].nt_cooldown:
+                                db[u].nt_last = get_now()
                                 await bot.send_message(int(u), e, parse_mode=ParseMode.MARKDOWN)
         await sleep(60)
 
@@ -83,49 +87,30 @@ async def inline_edt(inline_query: InlineQuery):
     await bot.answer_inline_query(inline_query.id, results=[item], cache_time=1)
 
 
-@dp.message_handler(commands=["start", "help"])
-async def send_welcome(message: types.Message):
+@dp.message_handler(commands="Start")
+async def start(message: types.Message):
+    user_id = str(message.from_user.id)
     await message.chat.do(types.ChatActions.TYPING)
-    logger.info(f"{message.from_user.username} do start/help command: {message.text}")
+    logger.info(f"{message.from_user.username} start : {message.text}")
     with dbL:
         with shelve.open("edt", writeback=True) as db:
-            if str(message.from_user.id) not in db:
-                db[str(message.from_user.id)] = dict()
-                logger.info(f"db creation for {message.from_user.username}")
-
-    msg = markdown.text(
-        markdown.text("💠 Welcome to the TelegramEDT, a calendar bot for the Lyon 1 University ! 💠\n"),
-        markdown.text(
-            markdown.text("🗓"),
-            markdown.code("/edt [day | next | week | next week]"),
-            markdown.text(", for show your next course")
-        ),
-        markdown.text(
-            markdown.text("🔔"),
-            markdown.code("/notif <set | info | time number | cooldown number>"),
-            markdown.text(", setup notifications")
-        ),
-        markdown.text(
-            markdown.text("⚙️"),
-            markdown.code("/setedt <resources>"),
-            markdown.text(", to setup your calendar\nThe resources can be get on the url of exported calendar")
-        ),
-        markdown.text(
-            markdown.text("🔗"),
-            markdown.code("/getedt"),
-            markdown.text(", to get your calendar url")
-        ),
-        markdown.text(
-            markdown.text("ℹ️"),
-            markdown.code("/help"),
-            markdown.text(", to show this command")
-        ),
-        sep="\n"
-    )
-    await message.reply(msg, parse_mode=ParseMode.MARKDOWN)
+            if user_id not in db:
+                db[user_id] = User(int(user_id), message.from_user.locale.language)
+            user = db[user_id]
+    await message.reply(lang(user, "welcome"), parse_mode=ParseMode.MARKDOWN)
 
 
-@dp.message_handler(commands=["edt"])
+@dp.message_handler(commands="help")
+async def send_welcome(message: types.Message):
+    await message.chat.do(types.ChatActions.TYPING)
+    logger.info(f"{message.from_user.username} do help command: {message.text}")
+    with dbL:
+        with shelve.open("edt", writeback=True) as db:
+            user = db[str(message.from_user.id)]
+    await message.reply(lang(user, "help"), parse_mode=ParseMode.MARKDOWN)
+
+
+@dp.message_handler(commands="edt")
 @dp.message_handler(lambda msg: msg.text.lower() in TIMES[1:])
 async def edt_cmd(message: types.Message):
     await message.chat.do(types.ChatActions.TYPING)
@@ -142,111 +127,89 @@ async def edt_cmd(message: types.Message):
     await message.reply(resp, parse_mode=ParseMode.MARKDOWN, reply_markup=key)
 
 
-@dp.message_handler(commands=["setedt"])
+@dp.message_handler(commands="setedt")
 async def edt_set(message: types.Message):
+    user_id = str(message.from_user.id)
     await message.chat.do(types.ChatActions.TYPING)
     logger.info(f"{message.from_user.username} do setedt command: {message.text}")
     resources = message.text[8:]
 
-    try:
-        Calendar("", int(resources))
-    except (ParseError, ConnectionError, InvalidSchema, MissingSchema, ValueError):
-        msg = markdown.bold("Invalid resources ! ❌")
-    else:
-        with dbL:
-            with shelve.open("edt", writeback=True) as db:
-                db[str(message.from_user.id)]["resources"] = int(resources)
-        msg = markdown.text("EDT set ✅")
+    with dbL:
+        with shelve.open("edt", writeback=True) as db:
+            try:
+                Calendar("", int(resources))
+            except (ParseError, ConnectionError, InvalidSchema, MissingSchema, ValueError):
+                msg = lang(db[user_id], "setedt_err_res")
+            else:
+                db[user_id].resources = int(resources)
+                msg = lang(db[user_id], "setedt")
 
-    await message.reply(msg, parse_mode=ParseMode.MARKDOWN)
+            await message.reply(msg, parse_mode=ParseMode.MARKDOWN)
 
 
-@dp.message_handler(commands=["getedt"])
+@dp.message_handler(commands="getedt")
 async def edt_geturl(message: types.Message):
+    user_id = str(message.from_user.id)
     await message.chat.do(types.ChatActions.TYPING)
     logger.info(f"{message.from_user.username} do getedt command: {message.text}")
     with dbL:
         with shelve.open("edt", writeback=True) as db:
-            if (str(message.from_user.id) in db) and ("resources" in db[str(message.from_user.id)]):
-                await message.reply(db[str(message.from_user.id)]["resources"])
+            if db[user_id].resources:
+                await message.reply(db[user_id].resources)
             else:
-                await message.reply("No EDT set ! ❌")
+                await message.reply(lang(db[user_id], "getedt_err"))
 
 
-@dp.message_handler(commands=["notif"])
+@dp.message_handler(commands="notif")
 async def notif_cmd(message: types.Message):
+    user_id = str(message.from_user.id)
     await message.chat.do(types.ChatActions.TYPING)
     logger.info(f"{message.from_user.username} do notif command: {message.text}")
     with dbL:
         with shelve.open("edt", writeback=True) as db:
-            if "notif" not in db[str(message.from_user.id)]:
-                db[str(message.from_user.id)]["notif"] = dict()
-                db[str(message.from_user.id)]["notif"]["state"] = False
-                db[str(message.from_user.id)]["notif"]["time"] = 20
-                db[str(message.from_user.id)]["notif"]["cooldown"] = 20
-                last = datetime.datetime.now(datetime.timezone.utc).astimezone(tz=None) - datetime.timedelta(minutes=20)
-                db[str(message.from_user.id)]["notif"]["last"] = last
-
-            if message.text[7:10] == "set":
-                if db[str(message.from_user.id)]["notif"]["state"]:
+            if message.text[7:10] == "toggle":
+                if db[user_id].nt:
                     res = False
                 else:
                     res = True
 
-                db[str(message.from_user.id)]["notif"]["state"] = res
+                db[user_id].nt = res
+                msg = lang(db[user_id], "notif_set").format(res)
 
-                msg = markdown.text(
-                    markdown.text("Notifications set on "),
-                    markdown.code(res),
-                    markdown.text("✅")
-                )
             elif message.text[7:11] == "time" or message.text[7:15] == "cooldown":
                 cut = 11 if message.text[7:11] == "time" else 15
                 try:
                     int(message.text[cut+1:])
                 except ValueError:
-                    msg = markdown.bold("Invalid number ! ❌")
+                    msg = lang(db[user_id], "notif_err_num")
                 else:
-                    db[str(message.from_user.id)]["notif"][message.text[7:cut]] = int(message.text[cut+1:])
+                    if cut == 11:
+                        db[user_id]["notif"].nt_time = int(message.text[cut+1:])
+                    else:
+                        db[user_id]["notif"].nt_cooldown = int(message.text[cut + 1:])
 
-                    msg = markdown.text(
-                        markdown.text("Notification"),
-                        markdown.code(message.text[7:cut]),
-                        markdown.text("set to"),
-                        markdown.bold(message.text[cut+1:]),
-                        markdown.text("✅")
-                    )
+                    msg = lang(db(user_id), "notif_time_cooldown").format(message.text[7:cut], message.text[cut + 1:])
+
             elif message.text[7:11] == "info":
-                msg = markdown.text(
-                    markdown.code("Notification:"),
-                    markdown.text(
-                      markdown.bold("State:"),
-                      markdown.text(db[str(message.from_user.id)]["notif"]["state"])
-                    ),
-                    markdown.text(
-                        markdown.bold("Time:"),
-                        markdown.text(db[str(message.from_user.id)]["notif"]["time"])
-                    ),
-                    markdown.text(
-                        markdown.bold("Cooldown:"),
-                        markdown.text(db[str(message.from_user.id)]["notif"]["cooldown"])
-                    ),
-                    sep="\n"
-                )
+                msg = lang(db[user_id], "notif_info").format(db[user_id].nt, db[user_id].nt_time,
+                                                             db[user_id].nt_cooldown)
+
+            elif message.text[7:] == "":
+                msg = lang(db[user_id], "notif_help")
             else:
-                msg = markdown.bold("Invalid action ! ❌")
+                msg = lang(db[user_id], "notif_err_act")
 
             await message.reply(msg, parse_mode=ParseMode.MARKDOWN)
 
 
-@dp.message_handler(commands=["getid"])
+@dp.message_handler(commands="getid")
 async def get_id(message: types.Message):
     await message.chat.do(types.ChatActions.TYPING)
     logger.info(f"{message.from_user.username} do getid command: {message.text}")
     await message.reply(message.from_user.id)
 
 
-@dp.message_handler(commands=["getlogs"])
+@dp.message_handler(commands="getlogs")
 async def get_logs(message: types.Message):
     logger.info(f"{message.from_user.username} do getlog command: {message.text}")
     if message.from_user.id == ADMIN_ID:
@@ -272,7 +235,7 @@ async def get_logs(message: types.Message):
                 await message.reply(markdown.bold("Too much logs ! ❌"))
 
 
-@dp.message_handler(commands=["getdb"])
+@dp.message_handler(commands="getdb")
 async def get_db(message: types.Message):
     logger.info(f"{message.from_user.username} do getdb command: {message.text}")
     if message.from_user.id == ADMIN_ID:
@@ -286,8 +249,8 @@ async def get_db(message: types.Message):
         await message.reply(msg, parse_mode=ParseMode.MARKDOWN)
 
 
-@dp.message_handler(commands=["eval"])
-async def get_db(message: types.Message):
+@dp.message_handler(commands="eval")
+async def eval_cmd(message: types.Message):
     logger.info(f"{message.from_user.username} do eval command: {message.text}")
     if message.from_user.id == ADMIN_ID:
         msg = markdown.text(

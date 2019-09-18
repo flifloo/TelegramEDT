@@ -16,7 +16,8 @@ class Calendar(ics.Calendar):
         self.events = events
         self.timeline = Timeline(self)
 
-    def _url(self, time: str, url: list, pass_week: bool):
+    @staticmethod
+    def _url(time: str, url: list, pass_week: bool):
         now = datetime.datetime.now(datetime.timezone.utc).astimezone(tz=None)
         if now.isoweekday() in [6, 7] and pass_week:
             now += datetime.timedelta(days=(7 - (now.isoweekday() - 1)))
@@ -43,7 +44,6 @@ class Calendar(ics.Calendar):
         return msg
 
 
-
 class Event(ics.Event):
     def __init__(self, event: ics.Event):
         super().__init__()
@@ -57,8 +57,8 @@ class Event(ics.Event):
     def __str__(self):
         return markdown.text(
             markdown.bold(f"<{str(self.begin.date())[5:]}>"),
-            markdown.code(f"📓[{self.name}]:"),
-            markdown.text(f"⌚️ {str(self.begin.time())[:-3]} -> {str(self.end.time())[:-3]}"),
-            markdown.italic(f"📍 {self.location} 👨‍🏫 {self.organizer}"),
+            markdown.code(f"\uD83D\uDCD3[{self.name}]:"),
+            markdown.text(f"\u231A{str(self.begin.time())[:-3]} -> {str(self.end.time())[:-3]}"),
+            markdown.italic(f"\uD83D\uDCCD{self.location} \uD83D\uDC68\u200D\uD83C\uDFEB{self.organizer}"),
             sep="\n"
-        )
+        ) # surrogates not allowed
