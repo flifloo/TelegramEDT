@@ -3,6 +3,7 @@ import datetime
 import hashlib
 import logging
 import shelve
+import requests
 from asyncio import sleep
 from os import mkdir
 from os.path import isdir, isfile
@@ -13,7 +14,7 @@ from aiogram.types import InlineQuery, InputTextMessageContent, InlineQueryResul
 from aiogram.utils import markdown
 from aiogram.utils.exceptions import MessageIsTooLong
 from EDTcalendar import Calendar
-from EDTuser import User
+from EDTuser import User, KFET_URL
 from lang import lang
 from ics.parse import ParseError
 from requests.exceptions import ConnectionError, InvalidSchema, MissingSchema
@@ -62,14 +63,18 @@ async def notif():
         with dbL:
             with shelve.open("edt", writeback=True) as db:
                 for u in db:
-                    if db[u].resources and db[u].nt:
-                        now = get_now()
-                        c = db[u].calendar(pass_week=True)
-                        for e in c.timeline:
-                            if 0 <= (e.begin - now).total_seconds().__abs__()//60 <= db[u].nt_time and \
-                                    0 <= (now - db[u].nt_last).total_seconds()//60 >= db[u].nt_cooldown:
-                                db[u].nt_last = get_now()
-                                await bot.send_message(int(u), e, parse_mode=ParseMode.MARKDOWN)
+                    nt = db[u].get_notif()
+                    kf = db[u].get_kfet()
+                    if nt:
+                        await bot.send_message(int(u), lang(db[u], "notif_event")+nt, parse_mode=ParseMode.MARKDOWN)
+                    if kf is not None:
+                        if kf == 1:
+                            kf = lang(db[u], "kfet")
+                        elif kf == 2:
+                            kf = lang(db[u], "kfet_prb")
+                        else:
+                            kf = lang(db[u], "kfet_err")
+                        await bot.send_message(int(u), kf, parse_mode=ParseMode.MARKDOWN)
         await sleep(60)
 
 
@@ -127,6 +132,43 @@ async def edt_cmd(message: types.Message):
     await message.reply(resp, parse_mode=ParseMode.MARKDOWN, reply_markup=key)
 
 
+@dp.message_handler(commands="kfet")
+async def edt_cmd(message: types.Message):
+    user_id = str(message.from_user.id)
+    await message.chat.do(types.ChatActions.TYPING)
+    logger.info(f"{message.from_user.username} do kfet command: {message.text}")
+    with dbL:
+        with shelve.open("edt", writeback=True) as db:
+            if not 9 < get_now().hour < 14 or not get_now().isoweekday() < 5:
+                msg = lang(db[user_id], "kfet_close")
+            else:
+                msg = lang(db[user_id], "kfet_list")
+                cmds = requests.get(KFET_URL).json()
+                for c in cmds:
+                    msg += markdown.code(c) + " " if cmds[c]["statut"] == "T" else ""
+    await message.reply(msg, parse_mode=ParseMode.MARKDOWN)
+
+
+@dp.message_handler(commands="setkfet")
+async def edt_cmd(message: types.Message):
+    user_id = str(message.from_user.id)
+    await message.chat.do(types.ChatActions.TYPING)
+    logger.info(f"{message.from_user.username} do setkfet command: {message.text}")
+    with dbL:
+        with shelve.open("edt", writeback=True) as db:
+            if not 9 < get_now().hour < 14 or not get_now().isoweekday() < 5:
+                msg = lang(db[user_id], "kfet_close")
+            else:
+                try:
+                    int(message.text[9:])
+                except ValueError:
+                    msg = lang(db[user_id], "err_num")
+                else:
+                    db[user_id].kfet = int(message.text[9:])
+                    msg = lang(db[user_id], "kfet_set")
+    await message.reply(msg, parse_mode=ParseMode.MARKDOWN)
+
+
 @dp.message_handler(commands="setedt")
 async def edt_set(message: types.Message):
     user_id = str(message.from_user.id)
@@ -181,7 +223,7 @@ async def notif_cmd(message: types.Message):
                 try:
                     int(message.text[cut+1:])
                 except ValueError:
-                    msg = lang(db[user_id], "notif_err_num")
+                    msg = lang(db[user_id], "err_num")
                 else:
                     if cut == 11:
                         db[user_id].nt_time = int(message.text[cut+1:])
