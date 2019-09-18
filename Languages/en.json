@@ -1,6 +1,6 @@
 {
   "welcome": "\uD83D\uDCA0 *Welcome to the TelegramEDT bot !* \uD83D\uDCA0\n\uD83D\uDD39Please use the command /setedt to set your calendar\n\uD83D\uDD39Use /notif to configure events notification\n\u2139And /help for more commands",
-  "help": "\u2139 *Commands help* \u2139\n\uD83D\uDCC5/edt, show your next events\n\uD83D\uDD14/notif, set your events notifications\n\u2699/setedt, set your calendar",
+  "help": "\u2139 *Commands help* \u2139\n\uD83D\uDCC5/edt, show your next events\n\uD83D\uDD14/notif, set your events notifications\n\u2699/setedt, set your calendar\n\uD83D\uDCE4\t/getedt to show your ressource",
   "edt_err_set": "Your EDT is not set ! \u274C\n\u2139Use /setedt to fix that",
   "edt_err_choice": "Invalid choice ! \u274C\n\u2139You can choose between: `day`, `next`, `week`, `next week`",
   "setedt_err_res": "Invalid resources ! \u274C",

@@ -57,8 +57,8 @@ class Event(ics.Event):
     def __str__(self):
         return markdown.text(
             markdown.bold(f"<{str(self.begin.date())[5:]}>"),
-            markdown.code(f"\uD83D\uDCD3[{self.name}]:"),
-            markdown.text(f"\u231A{str(self.begin.time())[:-3]} -> {str(self.end.time())[:-3]}"),
-            markdown.italic(f"\uD83D\uDCCD{self.location} \uD83D\uDC68\u200D\uD83C\uDFEB{self.organizer}"),
+            markdown.code(f"📓[{self.name}]:"),
+            markdown.text(f"⌚{str(self.begin.time())[:-3]} -> {str(self.end.time())[:-3]}"),
+            markdown.italic(f"📍{self.location} 👨‍🏫{self.organizer}"),
             sep="\n"
-        ) # surrogates not allowed
+        )

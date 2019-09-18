@@ -167,7 +167,7 @@ async def notif_cmd(message: types.Message):
     logger.info(f"{message.from_user.username} do notif command: {message.text}")
     with dbL:
         with shelve.open("edt", writeback=True) as db:
-            if message.text[7:10] == "toggle":
+            if message.text[7:13] == "toggle":
                 if db[user_id].nt:
                     res = False
                 else:
@@ -184,11 +184,11 @@ async def notif_cmd(message: types.Message):
                     msg = lang(db[user_id], "notif_err_num")
                 else:
                     if cut == 11:
-                        db[user_id]["notif"].nt_time = int(message.text[cut+1:])
+                        db[user_id].nt_time = int(message.text[cut+1:])
                     else:
-                        db[user_id]["notif"].nt_cooldown = int(message.text[cut + 1:])
+                        db[user_id].nt_cooldown = int(message.text[cut + 1:])
 
-                    msg = lang(db(user_id), "notif_time_cooldown").format(message.text[7:cut], message.text[cut + 1:])
+                    msg = lang(db[user_id], "notif_time_cooldown").format(message.text[7:cut], message.text[cut + 1:])
 
             elif message.text[7:11] == "info":
                 msg = lang(db[user_id], "notif_info").format(db[user_id].nt, db[user_id].nt_time,
