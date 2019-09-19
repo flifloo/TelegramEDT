@@ -1,0 +1,5 @@
+__pycache__/
+edt.*
+logs/
+token.ini
+venv/
