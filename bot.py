@@ -106,7 +106,7 @@ async def start(message: types.Message):
 
 
 @dp.message_handler(commands="help")
-async def send_welcome(message: types.Message):
+async def help_cmd(message: types.Message):
     await message.chat.do(types.ChatActions.TYPING)
     logger.info(f"{message.from_user.username} do help command: {message.text}")
     with dbL:
@@ -133,13 +133,13 @@ async def edt_cmd(message: types.Message):
 
 
 @dp.message_handler(commands="kfet")
-async def edt_cmd(message: types.Message):
+async def kfet(message: types.Message):
     user_id = str(message.from_user.id)
     await message.chat.do(types.ChatActions.TYPING)
     logger.info(f"{message.from_user.username} do kfet command: {message.text}")
     with dbL:
         with shelve.open("edt", writeback=True) as db:
-            if not 9 < get_now().hour < 14 or not get_now().isoweekday() < 5:
+            if not 9 < get_now().hour < 14 or not get_now().isoweekday() < 6:
                 msg = lang(db[user_id], "kfet_close")
             else:
                 msg = lang(db[user_id], "kfet_list")
@@ -150,7 +150,7 @@ async def edt_cmd(message: types.Message):
 
 
 @dp.message_handler(commands="setkfet")
-async def edt_cmd(message: types.Message):
+async def kfet_set(message: types.Message):
     user_id = str(message.from_user.id)
     await message.chat.do(types.ChatActions.TYPING)
     logger.info(f"{message.from_user.username} do setkfet command: {message.text}")
