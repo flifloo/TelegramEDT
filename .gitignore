@@ -1,5 +1,11 @@
+# Python
 __pycache__/
-edt.*
-logs/
-token.ini
 venv/
+
+# Logs
+logs/
+
+# Bot private
+edt
+edt.*
+token.ini

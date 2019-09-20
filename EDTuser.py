@@ -28,8 +28,8 @@ class User:
             now = get_now()
             c = self.calendar(pass_week=False)
             for e in c.timeline:
-                if 0 <= (e.begin - now).total_seconds().__abs__() // 60 <= self.nt_time and \
-                        0 <= (now - self.nt_last).total_seconds() // 60 >= self.nt_cooldown:
+                if 0 < (e.begin - now).total_seconds() // 60 <= self.nt_time and \
+                        0 < (now - self.nt_last).total_seconds() // 60 >= self.nt_cooldown:
                     self.nt_last = get_now()
                     return e
             return None
