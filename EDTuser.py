@@ -38,7 +38,7 @@ class User:
         res = None
         if self.kfet:
             cmds = requests.get(KFET_URL).json()
-            if str(self.kfet) in cmds:
+            if cmds and str(self.kfet) in cmds:
                 res = 1 if cmds[str(self.kfet)]["statut"] == "T" else 2
             elif get_now().hour >= 14:
                 res = 3

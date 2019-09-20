@@ -34,7 +34,7 @@ logging.basicConfig(
 if not isfile("token.ini"):
     logger.critical("No token specified, impossible to start the bot !")
     exit(1)
-API_TOKEN = open("token.ini").read()
+API_TOKEN = open("token.ini").readline().replace("\n", "")
 ADMIN_ID = 148441652
 TIMES = ["", "day", "next", "week", "next week"]
 
@@ -66,7 +66,7 @@ async def notif():
                     nt = db[u].get_notif()
                     kf = db[u].get_kfet()
                     if nt:
-                        await bot.send_message(int(u), lang(db[u], "notif_event")+nt, parse_mode=ParseMode.MARKDOWN)
+                        await bot.send_message(int(u), lang(db[u], "notif_event")+str(nt), parse_mode=ParseMode.MARKDOWN)
                     if kf is not None:
                         if kf == 1:
                             kf = lang(db[u], "kfet")
