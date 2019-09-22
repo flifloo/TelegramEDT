@@ -3,6 +3,7 @@ import datetime
 import hashlib
 import logging
 import shelve
+import re
 import requests
 from asyncio import sleep
 from os import mkdir
@@ -10,7 +11,7 @@ from os.path import isdir, isfile
 from threading import RLock
 
 from aiogram import Bot, Dispatcher, executor, types
-from aiogram.types import InlineQuery, InputTextMessageContent, InlineQueryResultArticle, ParseMode, reply_keyboard
+from aiogram.types import InlineQuery, InputTextMessageContent, InlineQueryResultArticle, ParseMode, reply_keyboard, ContentType
 from aiogram.utils import markdown
 from aiogram.utils.exceptions import MessageIsTooLong
 from EDTcalendar import Calendar
@@ -18,6 +19,8 @@ from EDTuser import User, KFET_URL
 from lang import lang
 from ics.parse import ParseError
 from requests.exceptions import ConnectionError, InvalidSchema, MissingSchema
+from pyzbar.pyzbar import decode
+from PIL import Image
 
 
 if not isdir("logs"):
@@ -170,17 +173,34 @@ async def kfet_set(message: types.Message):
 
 
 @dp.message_handler(commands="setedt")
+@dp.message_handler(content_types=ContentType.PHOTO)
 async def edt_set(message: types.Message):
     user_id = str(message.from_user.id)
     await message.chat.do(types.ChatActions.TYPING)
     logger.info(f"{message.from_user.username} do setedt command: {message.text}")
-    resources = message.text[8:]
+
+    url = str()
+    if message.photo and message.caption == "/setedt":
+        file_path = await bot.get_file(message.photo[0].file_id)
+        file_url = f"https://api.telegram.org/file/bot{API_TOKEN}/{file_path['file_path']}"
+        qr = decode(Image.open(requests.get(file_url, stream=True).raw))
+        if qr:
+            url = str(qr[0].data)
+    elif message.text:
+        msg_url = re.findall("http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+", message.text)
+        if msg_url:
+            url = msg_url[0]
+    
+    if url:
+        resources = url[url.find("resources")+10:][:4]
+    elif message.text:
+        resources = message.text[8:]
 
     with dbL:
         with shelve.open("edt", writeback=True) as db:
             try:
                 Calendar("", int(resources))
-            except (ParseError, ConnectionError, InvalidSchema, MissingSchema, ValueError):
+            except (ParseError, ConnectionError, InvalidSchema, MissingSchema, ValueError, UnboundLocalError):
                 msg = lang(db[user_id], "setedt_err_res")
             else:
                 db[user_id].resources = int(resources)
