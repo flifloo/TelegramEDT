@@ -6,7 +6,7 @@
   "setedt_err_res": "Invalid resources ! \u274C\n\u2139Put your resources number or a export url/QR code of your calendar",
   "setedt": "EDT set \u2705",
   "getedt_err": "No EDT set ! \u274C",
-  "notif_event": "\uD83D\uDD14A event is coming !\n",
+  "notif_event": "\uD83D\uDD14An event is coming !\n",
   "kfet": "\uD83D\uDD14Your command is ready !",
   "kfet_prb": "\u26A0Your command got a problem, go check whats happening",
   "kfet_err": "\u274CYour order is not out",

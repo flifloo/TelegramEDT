@@ -103,7 +103,8 @@ async def start(message: types.Message):
     with dbL:
         with shelve.open("edt", writeback=True) as db:
             if user_id not in db:
-                db[user_id] = User(int(user_id), message.from_user.locale.language)
+                lg = message.from_user.locale.language if message.from_user.locale.language else ""
+                db[user_id] = User(int(user_id), lg)
             user = db[user_id]
     await message.reply(lang(user, "welcome"), parse_mode=ParseMode.MARKDOWN)
 
@@ -147,8 +148,9 @@ async def kfet(message: types.Message):
             else:
                 msg = lang(db[user_id], "kfet_list")
                 cmds = requests.get(KFET_URL).json()
-                for c in cmds:
-                    msg += markdown.code(c) + " " if cmds[c]["statut"] == "T" else ""
+                if cmds:
+                    for c in cmds:
+                        msg += markdown.code(c) + " " if cmds[c]["statut"] == "T" else ""
     await message.reply(msg, parse_mode=ParseMode.MARKDOWN)
 
 
