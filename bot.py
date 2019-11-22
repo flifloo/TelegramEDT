@@ -11,8 +11,9 @@ from os.path import isdir, isfile
 from threading import RLock
 
 from aiogram import Bot, Dispatcher, executor, types
-from aiogram.types import InlineQuery, InputTextMessageContent, InlineQueryResultArticle, ParseMode, reply_keyboard, ContentType
+from aiogram.types import InlineQuery, InputTextMessageContent, InlineKeyboardMarkup, InlineKeyboardButton, InlineQueryResultArticle, ParseMode, reply_keyboard, ContentType
 from aiogram.utils import markdown
+from aiogram.utils.callback_data import CallbackData
 from aiogram.utils.exceptions import MessageIsTooLong
 from EDTcalendar import Calendar
 from EDTuser import User, KFET_URL
@@ -40,14 +41,29 @@ if not isfile("token.ini"):
 API_TOKEN = open("token.ini").readline().replace("\n", "")
 ADMIN_ID = 148441652
 TIMES = ["", "day", "next", "week", "next week"]
+NOTIF_CMD = ["notif", "notif toggle", "notif time", "notif cooldown"]
 
 bot = Bot(token=API_TOKEN)
+posts_cb = CallbackData("post", "id", "action")
 dp = Dispatcher(bot)
 dbL = RLock()
 
 
 def get_now():
     return datetime.datetime.now(datetime.timezone.utc).astimezone(tz=None)
+
+
+def have_await_cmd(msg: types.Message):
+    with dbL:
+        with shelve.open("edt", writeback=True) as db:
+            return db[str(msg.from_user.id)].await_cmd
+
+
+def edt_key():
+    key = InlineKeyboardMarkup()
+    for i, n in enumerate(["Day", "Next", "Week", "Next week"]):
+        key.add(InlineKeyboardButton(n, callback_data=posts_cb.new(id=i, action=n.lower())))
+    return key
 
 
 def calendar(time: str, user_id: int):
@@ -66,8 +82,14 @@ async def notif():
         with dbL:
             with shelve.open("edt", writeback=True) as db:
                 for u in db:
-                    nt = db[u].get_notif()
-                    kf = db[u].get_kfet()
+                    nt = None
+                    kg = None
+                    try:
+                        nt = db[u].get_notif()
+                        kf = db[u].get_kfet()
+                    except:
+                        pass
+
                     if nt:
                         await bot.send_message(int(u), lang(db[u], "notif_event")+str(nt), parse_mode=ParseMode.MARKDOWN)
                     if kf is not None:
@@ -95,7 +117,7 @@ async def inline_edt(inline_query: InlineQuery):
     await bot.answer_inline_query(inline_query.id, results=[item], cache_time=1)
 
 
-@dp.message_handler(commands="Start")
+@dp.message_handler(commands="start")
 async def start(message: types.Message):
     user_id = str(message.from_user.id)
     await message.chat.do(types.ChatActions.TYPING)
@@ -106,7 +128,11 @@ async def start(message: types.Message):
                 lg = message.from_user.locale.language if message.from_user.locale.language else ""
                 db[user_id] = User(int(user_id), lg)
             user = db[user_id]
-    await message.reply(lang(user, "welcome"), parse_mode=ParseMode.MARKDOWN)
+    key = reply_keyboard.ReplyKeyboardMarkup()
+    key.add(reply_keyboard.KeyboardButton("Edt"))
+    key.add(reply_keyboard.KeyboardButton("Setedt"))
+    key.add(reply_keyboard.KeyboardButton("Notif"))
+    await message.reply(lang(user, "welcome"), parse_mode=ParseMode.MARKDOWN, reply_markup=key)
 
 
 @dp.message_handler(commands="help")
@@ -119,21 +145,18 @@ async def help_cmd(message: types.Message):
     await message.reply(lang(user, "help"), parse_mode=ParseMode.MARKDOWN)
 
 
-@dp.message_handler(commands="edt")
-@dp.message_handler(lambda msg: msg.text.lower() in TIMES[1:])
+@dp.message_handler(lambda msg: msg.text.lower() == "edt")
 async def edt_cmd(message: types.Message):
     await message.chat.do(types.ChatActions.TYPING)
     logger.info(f"{message.from_user.username} do edt command: {message.text}")
-    text = message.text.lower()
-    if text[:4] == "/edt":
-        text = text[5:]
-    resp = calendar(text, message.from_user.id)
-    key = reply_keyboard.ReplyKeyboardMarkup()
-    key.add(reply_keyboard.KeyboardButton("Day"))
-    key.add(reply_keyboard.KeyboardButton("Next"))
-    key.add(reply_keyboard.KeyboardButton("Week"))
-    key.add(reply_keyboard.KeyboardButton("Next week"))
-    await message.reply(resp, parse_mode=ParseMode.MARKDOWN, reply_markup=key)
+    await message.reply(calendar("day", message.from_user.id), parse_mode=ParseMode.MARKDOWN, reply_markup=edt_key())
+
+
+@dp.callback_query_handler(posts_cb.filter(action=["day", "next", "week", "next week"]))
+async def edt_query(query: types.CallbackQuery, callback_data: dict):
+    await query.message.chat.do(types.ChatActions.TYPING)
+    logger.info(f"{query.message.from_user.username} do edt query")
+    await query.message.reply(calendar(callback_data["action"], query.from_user.id), parse_mode=ParseMode.MARKDOWN, reply_markup=edt_key())
 
 
 @dp.message_handler(commands="kfet")
@@ -150,7 +173,7 @@ async def kfet(message: types.Message):
                 cmds = requests.get(KFET_URL).json()
                 if cmds:
                     for c in cmds:
-                        msg += markdown.code(c) + " " if cmds[c]["statut"] == "T" else ""
+                        msg += markdown.code(c) + " " if cmds[c]["statut"] == "ok" else ""
     await message.reply(msg, parse_mode=ParseMode.MARKDOWN)
 
 
@@ -174,41 +197,15 @@ async def kfet_set(message: types.Message):
     await message.reply(msg, parse_mode=ParseMode.MARKDOWN)
 
 
-@dp.message_handler(commands="setedt")
-@dp.message_handler(content_types=ContentType.PHOTO)
-async def edt_set(message: types.Message):
+@dp.message_handler(lambda msg: msg.text.lower() == "setedt")
+async def edt_await(message: types.Message):
     user_id = str(message.from_user.id)
     await message.chat.do(types.ChatActions.TYPING)
     logger.info(f"{message.from_user.username} do setedt command: {message.text}")
-
-    url = str()
-    if message.photo and message.caption == "/setedt":
-        file_path = await bot.get_file(message.photo[0].file_id)
-        file_url = f"https://api.telegram.org/file/bot{API_TOKEN}/{file_path['file_path']}"
-        qr = decode(Image.open(requests.get(file_url, stream=True).raw))
-        if qr:
-            url = str(qr[0].data)
-    elif message.text:
-        msg_url = re.findall("http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+", message.text)
-        if msg_url:
-            url = msg_url[0]
-    
-    if url:
-        resources = url[url.find("resources")+10:][:4]
-    elif message.text:
-        resources = message.text[8:]
-
     with dbL:
         with shelve.open("edt", writeback=True) as db:
-            try:
-                Calendar("", int(resources))
-            except (ParseError, ConnectionError, InvalidSchema, MissingSchema, ValueError, UnboundLocalError):
-                msg = lang(db[user_id], "setedt_err_res")
-            else:
-                db[user_id].resources = int(resources)
-                msg = lang(db[user_id], "setedt")
-
-            await message.reply(msg, parse_mode=ParseMode.MARKDOWN)
+            db[user_id].await_cmd = "setedt"
+            await message.reply(lang(db[user_id], "setedt_wait"), parse_mode=ParseMode.MARKDOWN)
 
 
 @dp.message_handler(commands="getedt")
@@ -224,14 +221,28 @@ async def edt_geturl(message: types.Message):
                 await message.reply(lang(db[user_id], "getedt_err"))
 
 
-@dp.message_handler(commands="notif")
+@dp.message_handler(lambda msg: msg.text.lower() == "notif")
 async def notif_cmd(message: types.Message):
     user_id = str(message.from_user.id)
     await message.chat.do(types.ChatActions.TYPING)
-    logger.info(f"{message.from_user.username} do notif command: {message.text}")
+    logger.info(f"{message.from_user.username} do notif: {message.text}")
+    key = InlineKeyboardMarkup()
+    for i, n in enumerate(["Toggle", "Time", "Cooldown"]):
+        key.add(InlineKeyboardButton(n, callback_data=posts_cb.new(id=i, action=n.lower())))
     with dbL:
         with shelve.open("edt", writeback=True) as db:
-            if message.text[7:13] == "toggle":
+            msg = lang(db[user_id], "notif_info").format(db[user_id].nt, db[user_id].nt_time, db[user_id].nt_cooldown)
+    await message.reply(msg, parse_mode=ParseMode.MARKDOWN, reply_markup=key)
+
+
+@dp.callback_query_handler(posts_cb.filter(action=["toggle", "time", "cooldown"]))
+async def notif_query(query: types.CallbackQuery, callback_data: dict):
+    user_id = str(query.from_user.id)
+    await query.message.chat.do(types.ChatActions.TYPING)
+    logger.info(f"{query.message.from_user.username} do notif query")
+    with dbL:
+        with shelve.open("edt", writeback=True) as db:
+            if callback_data["action"] == "toggle":
                 if db[user_id].nt:
                     res = False
                 else:
@@ -240,30 +251,66 @@ async def notif_cmd(message: types.Message):
                 db[user_id].nt = res
                 msg = lang(db[user_id], "notif_set").format(res)
 
-            elif message.text[7:11] == "time" or message.text[7:15] == "cooldown":
-                cut = 11 if message.text[7:11] == "time" else 15
+            elif callback_data["action"] in ["time", "cooldown"]:
+                db[user_id].await_cmd = callback_data["action"]
+                msg = lang(db[user_id], "notif_await")
+
+    await query.message.reply(msg, parse_mode=ParseMode.MARKDOWN)
+
+
+@dp.message_handler(lambda msg: have_await_cmd(msg), content_types=[ContentType.TEXT, ContentType.PHOTO])
+async def await_cmd(message: types.message):
+    user_id = str(message.from_user.id)
+    await message.chat.do(types.ChatActions.TYPING)
+    logger.info(f"{message.from_user.username} do awaited commande")
+    msg = None
+    with dbL:
+        with shelve.open("edt", writeback=True) as db:
+            if db[user_id].await_cmd == "setedt":
+                url = str()
+                if message.photo:
+                    file_path = await bot.get_file(message.photo[0].file_id)
+                    file_url = f"https://api.telegram.org/file/bot{API_TOKEN}/{file_path['file_path']}"
+                    qr = decode(Image.open(requests.get(file_url, stream=True).raw))
+                    if qr:
+                        url = str(qr[0].data)
+                elif message.text:
+                    msg_url = re.findall(
+                        "http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+", message.text)
+                    if msg_url:
+                        url = msg_url[0]
+
+                if url:
+                    resources = url[url.find("resources") + 10:][:4]
+                elif message.text:
+                    resources = message.text
+
                 try:
-                    int(message.text[cut+1:])
+                    Calendar("", int(resources))
+                except (ParseError, ConnectionError, InvalidSchema, MissingSchema, ValueError, UnboundLocalError):
+                    msg = lang(db[user_id], "setedt_err_res")
+                else:
+                    db[user_id].resources = int(resources)
+                    msg = lang(db[user_id], "setedt")
+
+            elif db[user_id].await_cmd in ["time", "cooldown"]:
+                try:
+                    value = int(message.text)
                 except ValueError:
                     msg = lang(db[user_id], "err_num")
                 else:
-                    if cut == 11:
-                        db[user_id].nt_time = int(message.text[cut+1:])
+                    if db[user_id].await_cmd == "time":
+                        db[user_id].nt_time = value
                     else:
-                        db[user_id].nt_cooldown = int(message.text[cut + 1:])
+                        db[user_id].nt_cooldown = value
 
-                    msg = lang(db[user_id], "notif_time_cooldown").format(message.text[7:cut], message.text[cut + 1:])
+                    msg = lang(db[user_id], "notif_time_cooldown").format(db[user_id].await_cmd[6:], value)
 
-            elif message.text[7:11] == "info":
-                msg = lang(db[user_id], "notif_info").format(db[user_id].nt, db[user_id].nt_time,
-                                                             db[user_id].nt_cooldown)
+            if db[user_id].await_cmd:
+                db[user_id].await_cmd = str()
 
-            elif message.text[7:] == "":
-                msg = lang(db[user_id], "notif_help")
-            else:
-                msg = lang(db[user_id], "notif_err_act")
-
-            await message.reply(msg, parse_mode=ParseMode.MARKDOWN)
+    if msg:
+        await message.reply(msg, parse_mode=ParseMode.MARKDOWN)
 
 
 @dp.message_handler(commands="getid")

@@ -6,6 +6,7 @@
   "setedt_err_res": "Invalid resources ! \u274C\n\u2139Put your resources number or a export url/QR code of your calendar",
   "setedt": "EDT set \u2705",
   "getedt_err": "No EDT set ! \u274C",
+  "setedt_wait": "Send a QR code, resource number or the url of the calendar !",
   "notif_event": "\uD83D\uDD14An event is coming !\n",
   "kfet": "\uD83D\uDD14Your command is ready !",
   "kfet_prb": "\u26A0Your command got a problem, go check whats happening",
@@ -17,6 +18,5 @@
   "err_num": "Invalid number ! \u274C",
   "notif_time_cooldown": "Notification `{}` set to `{}` ! \u2705",
   "notif_info": "_Notification_\n*State:* {}\n*Time:* {}\n*Cooldown:* {}",
-  "notif_help": "\u2139 *Notif help* \u2139\n\uD83D\uDD39`toggle` to switch on/off notifications\n\uD83D\uDD39`time` to set time in minutes between notification and event\n\uD83D\uDD39`cooldown` set time in minutes between notification",
-  "notif_err_act": "Invalid action ! \u274C\n\u2139Use /notif to see help"
+  "notif_await": "Please send the new value !"
 }

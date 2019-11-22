@@ -19,6 +19,7 @@ class User:
         self.nt_cooldown = 20
         self.nt_last = get_now()
         self.kfet = None
+        self.await_cmd = str()
 
     def calendar(self, time: str = "", pass_week: bool = False):
         return Calendar(time, self.resources, pass_week=pass_week)
