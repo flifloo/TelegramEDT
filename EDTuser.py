@@ -2,7 +2,7 @@ import datetime
 import requests
 from EDTcalendar import Calendar
 
-KFET_URL = "https://kfet.bdeinfo.org/?page=api_commandes"
+KFET_URL = "http://kfet.bdeinfo.org/orders"
 
 
 def get_now():
@@ -39,7 +39,7 @@ class User:
         if self.kfet:
             cmds = requests.get(KFET_URL).json()
             if cmds and str(self.kfet) in cmds:
-                res = 1 if cmds[str(self.kfet)]["statut"] == "T" else 2
+                res = 1 if cmds[str(self.kfet)] == "ok" else 2 if cmds[str(self.kfet)] == "ko" else 3
             elif get_now().hour >= 14:
                 res = 3
         self.kfet = None if res else self.kfet
