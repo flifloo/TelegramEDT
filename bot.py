@@ -125,7 +125,10 @@ async def start(message: types.Message):
         with shelve.open("edt", writeback=True) as db:
             if user_id not in db:
                 logger.info(f"{message.from_user.username} add to the db")
-                lg = message.from_user.locale.language if message.from_user.locale.language else ""
+                if message.from_user.locale and message.from_user.locale.language:
+                    lg = message.from_user.locale.language
+                else:
+                    lg = ""
                 db[user_id] = User(int(user_id), lg)
             user = db[user_id]
     key = reply_keyboard.ReplyKeyboardMarkup()
