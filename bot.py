@@ -120,10 +120,11 @@ async def inline_edt(inline_query: InlineQuery):
 async def start(message: types.Message):
     user_id = str(message.from_user.id)
     await message.chat.do(types.ChatActions.TYPING)
-    logger.info(f"{message.from_user.username} start : {message.text}")
+    logger.info(f"{message.from_user.username} start")
     with dbL:
         with shelve.open("edt", writeback=True) as db:
             if user_id not in db:
+                logger.info(f"{message.from_user.username} add to the db")
                 lg = message.from_user.locale.language if message.from_user.locale.language else ""
                 db[user_id] = User(int(user_id), lg)
             user = db[user_id]
@@ -139,7 +140,7 @@ async def start(message: types.Message):
 @dp.message_handler(commands="help")
 async def help_cmd(message: types.Message):
     await message.chat.do(types.ChatActions.TYPING)
-    logger.info(f"{message.from_user.username} do help command: {message.text}")
+    logger.info(f"{message.from_user.username} do help command")
     with dbL:
         with shelve.open("edt", writeback=True) as db:
             user = db[str(message.from_user.id)]
@@ -149,7 +150,7 @@ async def help_cmd(message: types.Message):
 @dp.message_handler(lambda msg: msg.text.lower() == "edt")
 async def edt_cmd(message: types.Message):
     await message.chat.do(types.ChatActions.TYPING)
-    logger.info(f"{message.from_user.username} do edt command: {message.text}")
+    logger.info(f"{message.from_user.username} do edt")
     await message.reply(calendar("day", message.from_user.id), parse_mode=ParseMode.MARKDOWN, reply_markup=edt_key())
 
 
@@ -164,7 +165,7 @@ async def edt_query(query: types.CallbackQuery, callback_data: dict):
 async def kfet(message: types.Message):
     user_id = str(message.from_user.id)
     await message.chat.do(types.ChatActions.TYPING)
-    logger.info(f"{message.from_user.username} do kfet command")
+    logger.info(f"{message.from_user.username} do kfet")
     with dbL:
         with shelve.open("edt", writeback=True) as db:
             if not 9 < get_now().hour < 14 or not get_now().isoweekday() < 6:
@@ -182,7 +183,7 @@ async def kfet(message: types.Message):
 async def kfet_set(message: types.Message):
     user_id = str(message.from_user.id)
     await message.chat.do(types.ChatActions.TYPING)
-    logger.info(f"{message.from_user.username} do setkfet command")
+    logger.info(f"{message.from_user.username} do setkfet")
     with dbL:
         with shelve.open("edt", writeback=True) as db:
             if not 9 < get_now().hour < 14 or not get_now().isoweekday() < 5:
@@ -198,7 +199,7 @@ async def kfet_set(message: types.Message):
 async def edt_await(message: types.Message):
     user_id = str(message.from_user.id)
     await message.chat.do(types.ChatActions.TYPING)
-    logger.info(f"{message.from_user.username} do setedt command: {message.text}")
+    logger.info(f"{message.from_user.username} do setedt")
     with dbL:
         with shelve.open("edt", writeback=True) as db:
             db[user_id].await_cmd = "setedt"
@@ -209,7 +210,7 @@ async def edt_await(message: types.Message):
 async def edt_geturl(message: types.Message):
     user_id = str(message.from_user.id)
     await message.chat.do(types.ChatActions.TYPING)
-    logger.info(f"{message.from_user.username} do getedt command: {message.text}")
+    logger.info(f"{message.from_user.username} do getedt command")
     with dbL:
         with shelve.open("edt", writeback=True) as db:
             if db[user_id].resources:
@@ -222,7 +223,7 @@ async def edt_geturl(message: types.Message):
 async def notif_cmd(message: types.Message):
     user_id = str(message.from_user.id)
     await message.chat.do(types.ChatActions.TYPING)
-    logger.info(f"{message.from_user.username} do notif: {message.text}")
+    logger.info(f"{message.from_user.username} do notif")
     key = InlineKeyboardMarkup()
     for i, n in enumerate(["Toggle", "Time", "Cooldown"]):
         key.add(InlineKeyboardButton(n, callback_data=posts_cb.new(id=i, action=n.lower())))
@@ -259,10 +260,10 @@ async def notif_query(query: types.CallbackQuery, callback_data: dict):
 async def await_cmd(message: types.message):
     user_id = str(message.from_user.id)
     await message.chat.do(types.ChatActions.TYPING)
-    logger.info(f"{message.from_user.username} do awaited commande")
     msg = None
     with dbL:
         with shelve.open("edt", writeback=True) as db:
+            logger.info(f"{message.from_user.username} do awaited commande: {db[user_id].await_cmd}")
             if db[user_id].await_cmd == "setedt":
                 url = str()
                 if message.photo:
@@ -322,13 +323,13 @@ async def await_cmd(message: types.message):
 @dp.message_handler(commands="getid")
 async def get_id(message: types.Message):
     await message.chat.do(types.ChatActions.TYPING)
-    logger.info(f"{message.from_user.username} do getid command: {message.text}")
+    logger.info(f"{message.from_user.username} do getid command")
     await message.reply(message.from_user.id)
 
 
 @dp.message_handler(commands="getlogs")
 async def get_logs(message: types.Message):
-    logger.info(f"{message.from_user.username} do getlog command: {message.text}")
+    logger.info(f"{message.from_user.username} do getlog command")
     if message.from_user.id == ADMIN_ID:
         try:
             int(message.text[9:])
@@ -354,7 +355,7 @@ async def get_logs(message: types.Message):
 
 @dp.message_handler(commands="getdb")
 async def get_db(message: types.Message):
-    logger.info(f"{message.from_user.username} do getdb command: {message.text}")
+    logger.info(f"{message.from_user.username} do getdb command")
     if message.from_user.id == ADMIN_ID:
         with dbL:
             with shelve.open("edt") as db:
@@ -368,7 +369,7 @@ async def get_db(message: types.Message):
 
 @dp.message_handler(commands="eval")
 async def eval_cmd(message: types.Message):
-    logger.info(f"{message.from_user.username} do eval command: {message.text}")
+    logger.info(f"{message.from_user.username} do eval command")
     if message.from_user.id == ADMIN_ID:
         msg = markdown.text(
             markdown.italic("eval:"),
