@@ -14,6 +14,7 @@
   "kfet_list": "\uD83D\uDDD2Kfet commands ready:\n",
   "kfet_close": "\uD83D\uDEABKfet close, sorry",
   "kfet_set": "Your command is set ! \u2705",
+  "kfet_set_await": "Send your command number !",
   "notif_set": "Notifications set on `{}` ! \u2705",
   "err_num": "Invalid number ! \u274C",
   "notif_time_cooldown": "Notification `{}` set to `{}` ! \u2705",

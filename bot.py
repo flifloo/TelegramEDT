@@ -41,7 +41,6 @@ if not isfile("token.ini"):
 API_TOKEN = open("token.ini").readline().replace("\n", "")
 ADMIN_ID = 148441652
 TIMES = ["", "day", "next", "week", "next week"]
-NOTIF_CMD = ["notif", "notif toggle", "notif time", "notif cooldown"]
 
 bot = Bot(token=API_TOKEN)
 posts_cb = CallbackData("post", "id", "action")
@@ -130,6 +129,8 @@ async def start(message: types.Message):
             user = db[user_id]
     key = reply_keyboard.ReplyKeyboardMarkup()
     key.add(reply_keyboard.KeyboardButton("Edt"))
+    key.add(reply_keyboard.KeyboardButton("Kfet"))
+    key.add(reply_keyboard.KeyboardButton("Setkfet"))
     key.add(reply_keyboard.KeyboardButton("Setedt"))
     key.add(reply_keyboard.KeyboardButton("Notif"))
     await message.reply(lang(user, "welcome"), parse_mode=ParseMode.MARKDOWN, reply_markup=key)
@@ -159,11 +160,11 @@ async def edt_query(query: types.CallbackQuery, callback_data: dict):
     await query.message.reply(calendar(callback_data["action"], query.from_user.id), parse_mode=ParseMode.MARKDOWN, reply_markup=edt_key())
 
 
-@dp.message_handler(commands="kfet")
+@dp.message_handler(lambda msg: msg.text.lower() == "kfet")
 async def kfet(message: types.Message):
     user_id = str(message.from_user.id)
     await message.chat.do(types.ChatActions.TYPING)
-    logger.info(f"{message.from_user.username} do kfet command: {message.text}")
+    logger.info(f"{message.from_user.username} do kfet command")
     with dbL:
         with shelve.open("edt", writeback=True) as db:
             if not 9 < get_now().hour < 14 or not get_now().isoweekday() < 6:
@@ -177,23 +178,19 @@ async def kfet(message: types.Message):
     await message.reply(msg, parse_mode=ParseMode.MARKDOWN)
 
 
-@dp.message_handler(commands="setkfet")
+@dp.message_handler(lambda msg: msg.text.lower() == "setkfet")
 async def kfet_set(message: types.Message):
     user_id = str(message.from_user.id)
     await message.chat.do(types.ChatActions.TYPING)
-    logger.info(f"{message.from_user.username} do setkfet command: {message.text}")
+    logger.info(f"{message.from_user.username} do setkfet command")
     with dbL:
         with shelve.open("edt", writeback=True) as db:
             if not 9 < get_now().hour < 14 or not get_now().isoweekday() < 5:
                 msg = lang(db[user_id], "kfet_close")
             else:
-                try:
-                    int(message.text[9:])
-                except ValueError:
-                    msg = lang(db[user_id], "err_num")
-                else:
-                    db[user_id].kfet = int(message.text[9:])
-                    msg = lang(db[user_id], "kfet_set")
+                db[user_id].await_cmd = "setkfet"
+                msg = lang(db[user_id], "kfet_set_await")
+
     await message.reply(msg, parse_mode=ParseMode.MARKDOWN)
 
 
@@ -292,6 +289,15 @@ async def await_cmd(message: types.message):
                 else:
                     db[user_id].resources = int(resources)
                     msg = lang(db[user_id], "setedt")
+
+            elif db[user_id].await_cmd == "setkfet":
+                try:
+                    int(message.text)
+                except ValueError:
+                    msg = lang(db[user_id], "err_num")
+                else:
+                    db[user_id].kfet = int(message.text)
+                    msg = lang(db[user_id], "kfet_set")
 
             elif db[user_id].await_cmd in ["time", "cooldown"]:
                 try:
