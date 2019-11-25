@@ -9,3 +9,6 @@ logs/
 edt
 edt.*
 token.ini
+
+# PyCharm
+.idea/

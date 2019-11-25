@@ -178,7 +178,7 @@ async def kfet(message: types.Message):
                 cmds = requests.get(KFET_URL).json()
                 if cmds:
                     for c in cmds:
-                        msg += markdown.code(c) + " " if cmds[c]["statut"] == "ok" else ""
+                        msg += markdown.code(c) + " " if cmds[c] == "ok" else ""
     await message.reply(msg, parse_mode=ParseMode.MARKDOWN)
 
 
