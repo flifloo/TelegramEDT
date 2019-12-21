@@ -19,5 +19,8 @@
   "err_num": "Invalid number ! \u274C",
   "notif_time_cooldown": "Notification `{}` set to `{}` ! \u2705",
   "notif_info": "_Notification_\n*State:* {}\n*Time:* {}\n*Cooldown:* {}",
-  "notif_await": "Please send the new value !"
+  "notif_await": "Please send the new value !",
+  "settomuss": "Tomuss set \u2705",
+  "settomuss_error": "Invalid RSS feed ! \u274C",
+  "settomuss_wait": "Send the RSS feed link of your Tomuss !"
 }

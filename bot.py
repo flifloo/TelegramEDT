@@ -22,6 +22,7 @@ from ics.parse import ParseError
 from requests.exceptions import ConnectionError, InvalidSchema, MissingSchema
 from pyzbar.pyzbar import decode
 from PIL import Image
+from feedparser import parse
 
 
 if not isdir("logs"):
@@ -82,16 +83,18 @@ async def notif():
             with shelve.open("edt", writeback=True) as db:
                 for u in db:
                     nt = None
-                    kg = None
+                    kf = None
+                    tm = None
                     try:
                         nt = db[u].get_notif()
                         kf = db[u].get_kfet()
+                        tm = db[u].get_tomuss()
                     except:
                         pass
 
                     if nt:
                         await bot.send_message(int(u), lang(db[u], "notif_event")+str(nt), parse_mode=ParseMode.MARKDOWN)
-                    if kf is not None:
+                    if kf:
                         if kf == 1:
                             kf = lang(db[u], "kfet")
                         elif kf == 2:
@@ -99,6 +102,17 @@ async def notif():
                         else:
                             kf = lang(db[u], "kfet_err")
                         await bot.send_message(int(u), kf, parse_mode=ParseMode.MARKDOWN)
+                    if tm:
+                        for i in tm:
+                            msg = markdown.text(
+                                markdown.bold(i.title),
+                                markdown.code(i.summary.replace("<br>", "\n").replace("<b>", "").replace("</b>", "")),
+                                sep="\n"
+                            )
+                            await bot.send_message(int(u), msg, parse_mode=ParseMode.MARKDOWN)
+                        db[u].tomuss_last = i
+
+
         await sleep(60)
 
 
@@ -137,6 +151,7 @@ async def start(message: types.Message):
     key.add(reply_keyboard.KeyboardButton("Setkfet"))
     key.add(reply_keyboard.KeyboardButton("Setedt"))
     key.add(reply_keyboard.KeyboardButton("Notif"))
+    key.add(reply_keyboard.KeyboardButton("Settomuss"))
     await message.reply(lang(user, "welcome"), parse_mode=ParseMode.MARKDOWN, reply_markup=key)
 
 
@@ -207,6 +222,17 @@ async def edt_await(message: types.Message):
         with shelve.open("edt", writeback=True) as db:
             db[user_id].await_cmd = "setedt"
             await message.reply(lang(db[user_id], "setedt_wait"), parse_mode=ParseMode.MARKDOWN)
+
+
+@dp.message_handler(lambda msg: msg.text.lower() == "settomuss")
+async def edt_await(message: types.Message):
+    user_id = str(message.from_user.id)
+    await message.chat.do(types.ChatActions.TYPING)
+    logger.info(f"{message.from_user.username} do settomuss")
+    with dbL:
+        with shelve.open("edt", writeback=True) as db:
+            db[user_id].await_cmd = "settomuss"
+            await message.reply(lang(db[user_id], "settomuss_wait"), parse_mode=ParseMode.MARKDOWN)
 
 
 @dp.message_handler(commands="getedt")
@@ -302,6 +328,13 @@ async def await_cmd(message: types.message):
                 else:
                     db[user_id].kfet = int(message.text)
                     msg = lang(db[user_id], "kfet_set")
+
+            elif db[user_id].await_cmd == "settomuss":
+                if not len(parse(message.text).entries):
+                    msg = lang(db[user_id], "settomuss_error")
+                else:
+                    db[user_id].tomuss_rss = message.text
+                    msg = lang(db[user_id], "settomuss")
 
             elif db[user_id].await_cmd in ["time", "cooldown"]:
                 try:

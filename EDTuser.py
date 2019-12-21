@@ -1,6 +1,7 @@
 import datetime
 import requests
 from EDTcalendar import Calendar
+from feedparser import parse
 
 KFET_URL = "http://kfet.bdeinfo.org/orders"
 
@@ -20,6 +21,8 @@ class User:
         self.nt_last = get_now()
         self.kfet = None
         self.await_cmd = str()
+        self.tomuss_rss = str()
+        self.tomuss_last = str()
 
     def calendar(self, time: str = "", pass_week: bool = False):
         return Calendar(time, self.resources, pass_week=pass_week)
@@ -45,3 +48,11 @@ class User:
                 res = 3
         self.kfet = None if res else self.kfet
         return res
+
+    def get_tomuss(self):
+        entry = list()
+        if self.tomuss_rss:
+            entry = [e for e in parse(self.tomuss_rss).entries]
+            if not self.tomuss_last:
+                return entry
+        return entry[self.tomuss_last:]
