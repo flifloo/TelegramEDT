@@ -3,35 +3,56 @@ import ics
 import requests
 from ics.timeline import Timeline
 from aiogram.utils import markdown
+from os.path import getmtime, isfile
 
 URL = "http://adelb.univ-lyon1.fr/jsp/custom/modules/plannings/anonymous_cal.jsp"
 
 
 class Calendar(ics.Calendar):
     def __init__(self, time: str, resources: int, url: str = URL, projectid: int = 4, pass_week: bool = True):
-        super().__init__(requests.get(self._url(time, [url, resources, projectid], pass_week)).text)
-        events = set()
-        for e in self.events:
-            events.add(Event(e))
-        self.events = events
+        super().__init__(self._get_calendar(url, resources, projectid))
+        self.events = self._events(time, pass_week)
         self.timeline = Timeline(self)
 
     @staticmethod
-    def _url(time: str, url: list, pass_week: bool):
-        now = datetime.datetime.now(datetime.timezone.utc).astimezone(tz=None)
-        if now.isoweekday() in [6, 7] and pass_week:
-            now += datetime.timedelta(days=(7 - (now.isoweekday() - 1)))
+    def _now():
+        return datetime.datetime.now(datetime.timezone.utc).astimezone(tz=None)
 
-        dates = {
+    def _dates(self):
+        now = self._now()
+        return {
             "": [0, 0],
             "day": [0, 0],
             "next": [1, 1],
             "week": [-(now.isoweekday() - 1), 7 - now.isoweekday()],
             "next week": [7 - (now.isoweekday() - 1), 7 + (7 - now.isoweekday())]
         }
+
+    def _url(self, url: str, resources: int, projectid: int):
+        now = self._now()
+        firstdate = now.date() - datetime.timedelta(days=now.weekday())
+        lastdate = now.date() + datetime.timedelta(days=7+(7-now.isoweekday()))
+        return f"{url}?resources={resources}&projectId={projectid}&calType=ical&firstDate={firstdate}&lastDate={lastdate}"
+
+    def _get_calendar(self, url: str, resources: int, projectid: int):
+        name = f"calendars/{url[1]}-{url[2]}.ical"
+        now = self._now().timestamp()
+        if not isfile(name) or now-getmtime(name) < now-360:
+            open(name, "w").write(requests.get(self._url(url, resources, projectid)).text)
+        return open(name, "r").read()
+
+    def _events(self, time: str, pass_week: bool):
+        now = self._now()
+        if now.isoweekday() in [6, 7] and pass_week:
+            now += datetime.timedelta(days=(8 - now.isoweekday()))
+        dates = self._dates()
         firstdate = now.date() + datetime.timedelta(days=dates[time][0])
         lastdate = now.date() + datetime.timedelta(days=dates[time][1])
-        return f"{url[0]}?resources={url[1]}&projectId={url[2]}&calType=ical&firstDate={firstdate}&lastDate={lastdate}"
+        events = set()
+        for e in self.events:
+            if firstdate <= e.begin.date() and e.end.date() <= lastdate:
+                events.add(Event(e))
+        return events
 
     def __str__(self):
         msg = str()

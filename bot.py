@@ -27,6 +27,8 @@ from feedparser import parse
 
 if not isdir("logs"):
     mkdir("logs")
+if not isdir("calendars"):
+    mkdir("calendars")
 
 logger = logging.getLogger("TelegramEDT")
 log_date = datetime.datetime.now(datetime.timezone.utc).astimezone(tz=None).date()
