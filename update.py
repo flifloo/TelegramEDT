@@ -1,5 +1,5 @@
 import shelve
-from EDTuser import User
+from base import User
 
 with shelve.open("edt", writeback=True) as db:
     for u in db:

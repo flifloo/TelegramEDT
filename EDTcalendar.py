@@ -35,7 +35,7 @@ class Calendar(ics.Calendar):
         return f"{url}?resources={resources}&projectId={projectid}&calType=ical&firstDate={firstdate}&lastDate={lastdate}"
 
     def _get_calendar(self, url: str, resources: int, projectid: int):
-        name = f"calendars/{url[1]}-{url[2]}.ical"
+        name = f"calendars/{resources}-{projectid}.ical"
         now = self._now().timestamp()
         if not isfile(name) or now-getmtime(name) < now-360:
             open(name, "w").write(requests.get(self._url(url, resources, projectid)).text)
