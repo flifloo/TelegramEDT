@@ -2,29 +2,30 @@ import asyncio
 import datetime
 import hashlib
 import logging
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 import re
-import requests
 from asyncio import sleep
 from os import mkdir
 from os.path import isdir, isfile
 from threading import RLock
 
+import requests
+from PIL import Image
 from aiogram import Bot, Dispatcher, executor, types
-from aiogram.types import InlineQuery, InputTextMessageContent, InlineKeyboardMarkup, InlineKeyboardButton,\
+from aiogram.types import InlineQuery, InputTextMessageContent, InlineKeyboardMarkup, InlineKeyboardButton, \
     InlineQueryResultArticle, ParseMode, reply_keyboard, ContentType
 from aiogram.utils import markdown
 from aiogram.utils.callback_data import CallbackData
 from aiogram.utils.exceptions import MessageIsTooLong
+from feedparser import parse
+from ics.parse import ParseError
+from pyzbar.pyzbar import decode
+from requests.exceptions import ConnectionError, InvalidSchema, MissingSchema
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
 from EDTcalendar import Calendar
 from base import User, KFET_URL, Base
 from lang import lang
-from ics.parse import ParseError
-from requests.exceptions import ConnectionError, InvalidSchema, MissingSchema
-from pyzbar.pyzbar import decode
-from PIL import Image
-from feedparser import parse
 
 tables = False
 if not isdir("logs"):
@@ -73,7 +74,7 @@ def get_now():
 
 def check_id(user: types.User):
     with dbL:
-        if user.id not in session.query(User.id).all():
+        if (user.id,) not in session.query(User.id).all():
             logger.info(f"{user.username} add to the db")
             if user.locale and user.locale.language:
                 lg = user.locale.language
@@ -175,7 +176,7 @@ async def help_cmd(message: types.Message):
     logger.info(f"{message.from_user.username} do help command")
     with dbL:
         user = session.query(User).filter_by(id=message.from_user.id).first()
-    await message.reply(lang(user, "help"), parse_mode=ParseMode.MARKDOWN)
+    await message.reply(lang(user, "help"), parse_mode=ParseMode.MARKDOWN, reply_markup=key)
 
 
 @dp.message_handler(lambda msg: msg.text.lower() == "edt")
@@ -210,7 +211,7 @@ async def kfet(message: types.Message):
             if cmds:
                 for c in cmds:
                     msg += markdown.code(c) + " " if cmds[c] == "ok" else ""
-    await message.reply(msg, parse_mode=ParseMode.MARKDOWN)
+    await message.reply(msg, parse_mode=ParseMode.MARKDOWN, reply_markup=key)
 
 
 @dp.message_handler(lambda msg: msg.text.lower() == "setkfet")
@@ -227,7 +228,7 @@ async def kfet_set(message: types.Message):
             msg = lang(user, "kfet_set_await")
             session.commit()
 
-    await message.reply(msg, parse_mode=ParseMode.MARKDOWN)
+    await message.reply(msg, parse_mode=ParseMode.MARKDOWN, reply_markup=key)
 
 
 @dp.message_handler(lambda msg: msg.text.lower() == "setedt")
@@ -240,7 +241,7 @@ async def edt_await(message: types.Message):
         user.await_cmd = "setedt"
         session.commit()
 
-    await message.reply(lang(user, "setedt_wait"), parse_mode=ParseMode.MARKDOWN)
+    await message.reply(lang(user, "setedt_wait"), parse_mode=ParseMode.MARKDOWN, reply_markup=key)
 
 
 @dp.message_handler(lambda msg: msg.text.lower() == "settomuss")
@@ -253,7 +254,7 @@ async def edt_await(message: types.Message):
         user.await_cmd = "settomuss"
         session.commit()
 
-    await message.reply(lang(user, "settomuss_wait"), parse_mode=ParseMode.MARKDOWN)
+    await message.reply(lang(user, "settomuss_wait"), parse_mode=ParseMode.MARKDOWN, reply_markup=key)
 
 
 @dp.message_handler(commands="getedt")
@@ -264,9 +265,9 @@ async def edt_geturl(message: types.Message):
     with dbL:
         user = session.query(User).filter_by(id=message.from_user.id).first()
         if user.resources:
-            await message.reply(user.resources)
+            await message.reply(user.resources, reply_markup=key)
         else:
-            await message.reply(lang(user, "getedt_err"))
+            await message.reply(lang(user, "getedt_err"), reply_markup=key)
 
 
 @dp.message_handler(lambda msg: msg.text.lower() == "notif")
@@ -375,7 +376,7 @@ async def await_cmd(message: types.message):
             session.commit()
 
     if msg:
-        await message.reply(msg, parse_mode=ParseMode.MARKDOWN)
+        await message.reply(msg, parse_mode=ParseMode.MARKDOWN, reply_markup=key)
 
 
 @dp.message_handler(commands="getid")
@@ -383,7 +384,7 @@ async def get_id(message: types.Message):
     check_id(message.from_user)
     await message.chat.do(types.ChatActions.TYPING)
     logger.info(f"{message.from_user.username} do getid command")
-    await message.reply(message.from_user.id)
+    await message.reply(message.from_user.id, reply_markup=key)
 
 
 @dp.message_handler(commands="getlogs")
@@ -395,7 +396,8 @@ async def get_logs(message: types.Message):
             int(message.text[9:])
         except ValueError:
             await message.chat.do(types.ChatActions.UPLOAD_DOCUMENT)
-            await message.reply_document(types.InputFile(f"logs/{log_date}.log"), caption=f"The {log_date} logs")
+            await message.reply_document(types.InputFile(f"logs/{log_date}.log"), caption=f"The {log_date} logs",
+                                         reply_markup=key)
         else:
             await message.chat.do(types.ChatActions.TYPING)
             logs = (open(f"logs/{log_date}.log", "r").readlines())[-int(message.text[9:]):]
@@ -408,9 +410,9 @@ async def get_logs(message: types.Message):
                 sep="\n"
             )
             try:
-                await message.reply(msg, parse_mode=ParseMode.MARKDOWN)
+                await message.reply(msg, parse_mode=ParseMode.MARKDOWN, reply_markup=key)
             except MessageIsTooLong:
-                await message.reply(markdown.bold("Too much logs ! ❌"))
+                await message.reply(markdown.bold("Too much logs ! ❌"), reply_markup=key)
 
 
 @dp.message_handler(commands="getdb")
@@ -427,7 +429,7 @@ async def get_db(message: types.Message):
                 markdown.code(users),
                 sep="\n"
             )
-        await message.reply(msg, parse_mode=ParseMode.MARKDOWN)
+        await message.reply(msg, parse_mode=ParseMode.MARKDOWN, reply_markup=key)
 
 
 @dp.message_handler(commands="eval")
@@ -440,7 +442,7 @@ async def eval_cmd(message: types.Message):
             markdown.code(eval(message.text[6:])),
             sep="\n"
         )
-        await message.reply(msg, parse_mode=ParseMode.MARKDOWN)
+        await message.reply(msg, parse_mode=ParseMode.MARKDOWN, reply_markup=key)
 
 
 @dp.errors_handler()
