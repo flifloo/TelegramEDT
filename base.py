@@ -2,27 +2,30 @@ import datetime
 import requests
 from EDTcalendar import Calendar
 from feedparser import parse
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, Integer, String, Boolean, Date
 
 KFET_URL = "http://kfet.bdeinfo.org/orders"
+Base = declarative_base()
 
 
 def get_now():
     return datetime.datetime.now(datetime.timezone.utc).astimezone(tz=None)
 
 
-class User:
-    def __init__(self, user_id: int, language: str):
-        self.id = user_id
-        self.language = language
-        self.resources = None
-        self.nt = False
-        self.nt_time = 20
-        self.nt_cooldown = 20
-        self.nt_last = get_now()
-        self.kfet = None
-        self.await_cmd = str()
-        self.tomuss_rss = str()
-        self.tomuss_last = str()
+class User(Base):
+    __tablename__ = "user"
+    id = Column(Integer, primary_key=True, unique=True)
+    language = Column(String, default="")
+    resources = Column(Integer)
+    nt = Column(Boolean, default=False)
+    nt_time = Column(Integer, default=20)
+    nt_cooldown = Column(Integer, default=20)
+    nt_last = Column(Date, default=get_now)
+    kfet = Column(Integer, default=0)
+    await_cmd = Column(String, default="")
+    tomuss_rss = Column(String)
+    tomuss_last = Column(String)
 
     def calendar(self, time: str = "", pass_week: bool = False):
         return Calendar(time, self.resources, pass_week=pass_week)
@@ -55,4 +58,12 @@ class User:
             entry = [e for e in parse(self.tomuss_rss).entries]
             if not self.tomuss_last:
                 return entry
-        return entry[self.tomuss_last:]
+        tomuss_last = 0
+        for i,e in enumerate(entry):
+            if str(e) == self.tomuss_last:
+                tomuss_last = i+1
+                break
+        return entry[tomuss_last:]
+
+    def __repr__(self):
+        return f"<User: {self.id}>"

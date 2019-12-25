@@ -1,5 +1,5 @@
 import json
-from EDTuser import User
+from base import User
 
 LANG = ["en"]
 
