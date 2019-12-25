@@ -5,6 +5,9 @@ venv/
 # Logs
 logs/
 
+# Calendars
+calendars/
+
 # Bot private
 edt
 edt.*
@@ -12,3 +15,6 @@ token.ini
 
 # PyCharm
 .idea/
+
+# Alembic
+alembic*
