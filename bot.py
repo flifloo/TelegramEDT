@@ -12,7 +12,8 @@ from os.path import isdir, isfile
 from threading import RLock
 
 from aiogram import Bot, Dispatcher, executor, types
-from aiogram.types import InlineQuery, InputTextMessageContent, InlineKeyboardMarkup, InlineKeyboardButton, InlineQueryResultArticle, ParseMode, reply_keyboard, ContentType
+from aiogram.types import InlineQuery, InputTextMessageContent, InlineKeyboardMarkup, InlineKeyboardButton,\
+    InlineQueryResultArticle, ParseMode, reply_keyboard, ContentType
 from aiogram.utils import markdown
 from aiogram.utils.callback_data import CallbackData
 from aiogram.utils.exceptions import MessageIsTooLong
@@ -59,8 +60,27 @@ if tables:
 dbL = RLock()
 
 
+re_url = re.compile(r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+")
+
+key = reply_keyboard.ReplyKeyboardMarkup()
+for k in ["Edt", "Kfet", "Setkfet", "Setedt", "Notif", "Settomuss"]:
+    key.add(reply_keyboard.KeyboardButton(k))
+
+
 def get_now():
     return datetime.datetime.now(datetime.timezone.utc).astimezone(tz=None)
+
+
+def check_id(user: types.User):
+    with dbL:
+        if user.id not in session.query(User.id).all():
+            logger.info(f"{user.username} add to the db")
+            if user.locale and user.locale.language:
+                lg = user.locale.language
+            else:
+                lg = ""
+            session.add(User(id=user.id, language=lg))
+            session.commit()
 
 
 def have_await_cmd(msg: types.Message):
@@ -69,10 +89,10 @@ def have_await_cmd(msg: types.Message):
 
 
 def edt_key():
-    key = InlineKeyboardMarkup()
+    keys = InlineKeyboardMarkup()
     for i, n in enumerate(["Day", "Next", "Week", "Next week"]):
-        key.add(InlineKeyboardButton(n, callback_data=posts_cb.new(id=i, action=n.lower())))
-    return key
+        keys.add(InlineKeyboardButton(n, callback_data=posts_cb.new(id=i, action=n.lower())))
+    return keys
 
 
 def calendar(time: str, user_id: int):
@@ -96,8 +116,8 @@ async def notif():
                     nt = u.get_notif()
                     kf = u.get_kfet()
                     tm = u.get_tomuss()
-                except:
-                    pass
+                except Exception as e:
+                    logger.error(e)
 
                 if nt:
                     await bot.send_message(u.id, lang(u, "notif_event")+str(nt), parse_mode=ParseMode.MARKDOWN)
@@ -125,6 +145,7 @@ async def notif():
 
 @dp.inline_handler()
 async def inline_edt(inline_query: InlineQuery):
+    check_id(inline_query.from_user)
     text = inline_query.query.lower() if inline_query.query.lower() in TIMES else "invalid"
     res = calendar(text, inline_query.from_user.id)
     input_content = InputTextMessageContent(res, parse_mode=ParseMode.MARKDOWN)
@@ -139,31 +160,17 @@ async def inline_edt(inline_query: InlineQuery):
 
 @dp.message_handler(commands="start")
 async def start(message: types.Message):
-    user_id = message.from_user.id
+    check_id(message.from_user)
     await message.chat.do(types.ChatActions.TYPING)
     logger.info(f"{message.from_user.username} start")
     with dbL:
-        if user_id not in session.query(User.id).all():
-            logger.info(f"{message.from_user.username} add to the db")
-            if message.from_user.locale and message.from_user.locale.language:
-                lg = message.from_user.locale.language
-            else:
-                lg = ""
-            session.add(User(id=user_id, language=lg))
-            session.commit()
-        user = session.query(User).filter_by(id=user_id).first()
-    key = reply_keyboard.ReplyKeyboardMarkup()
-    key.add(reply_keyboard.KeyboardButton("Edt"))
-    key.add(reply_keyboard.KeyboardButton("Kfet"))
-    key.add(reply_keyboard.KeyboardButton("Setkfet"))
-    key.add(reply_keyboard.KeyboardButton("Setedt"))
-    key.add(reply_keyboard.KeyboardButton("Notif"))
-    key.add(reply_keyboard.KeyboardButton("Settomuss"))
+        user = session.query(User).filter_by(id=message.from_user.id).first()
     await message.reply(lang(user, "welcome"), parse_mode=ParseMode.MARKDOWN, reply_markup=key)
 
 
 @dp.message_handler(commands="help")
 async def help_cmd(message: types.Message):
+    check_id(message.from_user)
     await message.chat.do(types.ChatActions.TYPING)
     logger.info(f"{message.from_user.username} do help command")
     with dbL:
@@ -173,6 +180,7 @@ async def help_cmd(message: types.Message):
 
 @dp.message_handler(lambda msg: msg.text.lower() == "edt")
 async def edt_cmd(message: types.Message):
+    check_id(message.from_user)
     await message.chat.do(types.ChatActions.TYPING)
     logger.info(f"{message.from_user.username} do edt")
     await message.reply(calendar("day", message.from_user.id), parse_mode=ParseMode.MARKDOWN, reply_markup=edt_key())
@@ -180,13 +188,16 @@ async def edt_cmd(message: types.Message):
 
 @dp.callback_query_handler(posts_cb.filter(action=["day", "next", "week", "next week"]))
 async def edt_query(query: types.CallbackQuery, callback_data: dict):
+    check_id(query.message.from_user)
     await query.message.chat.do(types.ChatActions.TYPING)
     logger.info(f"{query.message.from_user.username} do edt query")
-    await query.message.reply(calendar(callback_data["action"], query.from_user.id), parse_mode=ParseMode.MARKDOWN, reply_markup=edt_key())
+    await query.message.reply(calendar(callback_data["action"], query.from_user.id), parse_mode=ParseMode.MARKDOWN,
+                              reply_markup=edt_key())
 
 
 @dp.message_handler(lambda msg: msg.text.lower() == "kfet")
 async def kfet(message: types.Message):
+    check_id(message.from_user)
     await message.chat.do(types.ChatActions.TYPING)
     logger.info(f"{message.from_user.username} do kfet")
     with dbL:
@@ -204,6 +215,7 @@ async def kfet(message: types.Message):
 
 @dp.message_handler(lambda msg: msg.text.lower() == "setkfet")
 async def kfet_set(message: types.Message):
+    check_id(message.from_user)
     await message.chat.do(types.ChatActions.TYPING)
     logger.info(f"{message.from_user.username} do setkfet")
     with dbL:
@@ -220,6 +232,7 @@ async def kfet_set(message: types.Message):
 
 @dp.message_handler(lambda msg: msg.text.lower() == "setedt")
 async def edt_await(message: types.Message):
+    check_id(message.from_user)
     await message.chat.do(types.ChatActions.TYPING)
     logger.info(f"{message.from_user.username} do setedt")
     with dbL:
@@ -232,7 +245,7 @@ async def edt_await(message: types.Message):
 
 @dp.message_handler(lambda msg: msg.text.lower() == "settomuss")
 async def edt_await(message: types.Message):
-    user_id = str(message.from_user.id)
+    check_id(message.from_user)
     await message.chat.do(types.ChatActions.TYPING)
     logger.info(f"{message.from_user.username} do settomuss")
     with dbL:
@@ -245,7 +258,7 @@ async def edt_await(message: types.Message):
 
 @dp.message_handler(commands="getedt")
 async def edt_geturl(message: types.Message):
-    user_id = str(message.from_user.id)
+    check_id(message.from_user)
     await message.chat.do(types.ChatActions.TYPING)
     logger.info(f"{message.from_user.username} do getedt command")
     with dbL:
@@ -258,19 +271,21 @@ async def edt_geturl(message: types.Message):
 
 @dp.message_handler(lambda msg: msg.text.lower() == "notif")
 async def notif_cmd(message: types.Message):
+    check_id(message.from_user)
     await message.chat.do(types.ChatActions.TYPING)
     logger.info(f"{message.from_user.username} do notif")
-    key = InlineKeyboardMarkup()
+    keys = InlineKeyboardMarkup()
     for i, n in enumerate(["Toggle", "Time", "Cooldown"]):
-        key.add(InlineKeyboardButton(n, callback_data=posts_cb.new(id=i, action=n.lower())))
+        keys.add(InlineKeyboardButton(n, callback_data=posts_cb.new(id=i, action=n.lower())))
     with dbL:
         user = session.query(User).filter_by(id=message.from_user.id).first()
         msg = lang(user, "notif_info").format(user.nt, user.nt_time, user.nt_cooldown)
-    await message.reply(msg, parse_mode=ParseMode.MARKDOWN, reply_markup=key)
+    await message.reply(msg, parse_mode=ParseMode.MARKDOWN, reply_markup=keys)
 
 
 @dp.callback_query_handler(posts_cb.filter(action=["toggle", "time", "cooldown"]))
 async def notif_query(query: types.CallbackQuery, callback_data: dict):
+    check_id(query.message.from_user)
     await query.message.chat.do(types.ChatActions.TYPING)
     logger.info(f"{query.message.from_user.username} do notif query")
     with dbL:
@@ -294,6 +309,7 @@ async def notif_query(query: types.CallbackQuery, callback_data: dict):
 
 @dp.message_handler(lambda msg: have_await_cmd(msg), content_types=[ContentType.TEXT, ContentType.PHOTO])
 async def await_cmd(message: types.message):
+    check_id(message.from_user)
     await message.chat.do(types.ChatActions.TYPING)
     msg = None
     with dbL:
@@ -308,8 +324,7 @@ async def await_cmd(message: types.message):
                 if qr:
                     url = str(qr[0].data)
             elif message.text:
-                msg_url = re.findall(
-                    "http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+", message.text)
+                msg_url = re_url.findall(message.text)
                 if msg_url:
                     url = msg_url[0]
 
@@ -365,6 +380,7 @@ async def await_cmd(message: types.message):
 
 @dp.message_handler(commands="getid")
 async def get_id(message: types.Message):
+    check_id(message.from_user)
     await message.chat.do(types.ChatActions.TYPING)
     logger.info(f"{message.from_user.username} do getid command")
     await message.reply(message.from_user.id)
@@ -372,6 +388,7 @@ async def get_id(message: types.Message):
 
 @dp.message_handler(commands="getlogs")
 async def get_logs(message: types.Message):
+    check_id(message.from_user)
     logger.info(f"{message.from_user.username} do getlog command")
     if message.from_user.id == ADMIN_ID:
         try:
@@ -398,6 +415,7 @@ async def get_logs(message: types.Message):
 
 @dp.message_handler(commands="getdb")
 async def get_db(message: types.Message):
+    check_id(message.from_user)
     logger.info(f"{message.from_user.username} do getdb command")
     if message.from_user.id == ADMIN_ID:
         with dbL:
@@ -414,6 +432,7 @@ async def get_db(message: types.Message):
 
 @dp.message_handler(commands="eval")
 async def eval_cmd(message: types.Message):
+    check_id(message.from_user)
     logger.info(f"{message.from_user.username} do eval command")
     if message.from_user.id == ADMIN_ID:
         msg = markdown.text(
