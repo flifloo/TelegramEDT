@@ -13,6 +13,7 @@ from sqlalchemy.orm import sessionmaker
 from TelegramEDT.EDTcalendar import Calendar
 from TelegramEDT.base import Base, User
 from TelegramEDT.lang import lang
+from TelegramEDT.logger import logger
 
 tables = False
 if not isdir("logs"):
@@ -21,14 +22,6 @@ if not isdir("calendars"):
     mkdir("calendars")
 if not isfile("edt.db"):
     tables = True
-
-logger = logging.getLogger("TelegramEDT")
-log_date = datetime.datetime.now(datetime.timezone.utc).astimezone(tz=None).date()
-logging.basicConfig(
-    filename=f"logs/{log_date}.log",
-    format="{%(levelname)s}[%(asctime)s]: %(name)s | %(message)s",
-    level=logging.INFO,
-)
 
 if not isfile("token.ini"):
     logger.critical("No token specified, impossible to start the bot !")

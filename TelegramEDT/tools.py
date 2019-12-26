@@ -1,9 +1,11 @@
+import datetime
+
 from aiogram import types
 from aiogram.types import ParseMode
 from aiogram.utils import markdown
 from aiogram.utils.exceptions import MessageIsTooLong
 
-from TelegramEDT import ADMIN_ID, bot, dbL, dp, key, log_date, logger, session, check_id
+from TelegramEDT import ADMIN_ID, bot, dbL, dp, key, logger, session, check_id
 from TelegramEDT.base import User
 
 logger = logger.getChild("tools")
@@ -24,11 +26,11 @@ async def get_logs(message: types.Message):
             int(message.text[9:])
         except ValueError:
             await message.chat.do(types.ChatActions.UPLOAD_DOCUMENT)
-            await message.reply_document(types.InputFile(f"logs/{log_date}.log"), caption=f"The {log_date} logs",
+            await message.reply_document(types.InputFile(f"logs/current.log"), caption="The logs file",
                                          reply_markup=key)
         else:
             await message.chat.do(types.ChatActions.TYPING)
-            logs = (open(f"logs/{log_date}.log", "r").readlines())[-int(message.text[9:]):]
+            logs = (open(f"logs/current.log", "r").readlines())[-int(message.text[9:]):]
             log = str()
             for i in logs:
                 log += i
