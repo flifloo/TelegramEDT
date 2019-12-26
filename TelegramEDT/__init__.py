@@ -69,6 +69,6 @@ dp.register_message_handler(load_cmd, commands="load")
 dp.register_message_handler(unload_cmd, commands="unload")
 
 logger.info("Start loading modules")
-for m in ["basic", "edt", "kfet", "tomuss", "notif", "await_cmd", "tools"]:
+for m in ["basic", "edt", "kfet", "tomuss", "notif", "tools"]:
     load_module(m)
 logger.info("Modules loading finish")

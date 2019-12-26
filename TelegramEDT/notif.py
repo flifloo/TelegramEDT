@@ -4,11 +4,17 @@ from aiogram import types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ParseMode
 from aiogram.utils import markdown
 
-from TelegramEDT import bot, dbL, dp, logger, posts_cb, session, check_id
+from TelegramEDT import bot, dbL, dp, logger, posts_cb, session, check_id, key
 from TelegramEDT.base import User
 from TelegramEDT.lang import lang
 
 logger = logger.getChild("notif")
+
+
+def have_await_cmd(msg: types.Message):
+    with dbL:
+        user = session.query(User).filter_by(id=msg.from_user.id).first()
+        return user and user.await_cmd in ["time", "cooldown"]
 
 
 async def notif():
@@ -85,13 +91,37 @@ async def notif_query(query: types.CallbackQuery, callback_data: dict):
     await query.message.reply(msg, parse_mode=ParseMode.MARKDOWN)
 
 
+async def await_cmd(message: types.message):
+    check_id(message.from_user)
+    await message.chat.do(types.ChatActions.TYPING)
+    with dbL:
+        user = session.query(User).filter_by(id=message.from_user.id).first()
+        logger.info(f"{message.from_user.username} do awaited command")
+        try:
+            value = int(message.text)
+        except ValueError:
+            msg = lang(user, "err_num")
+        else:
+            if user.await_cmd == "time":
+                user.nt_time = value
+            else:
+                user.nt_cooldown = value
+
+            msg = lang(user, "notif_time_cooldown").format(user.await_cmd[6:], value)
+        user.await_cmd = str()
+        session.commit()
+    await message.reply(msg, parse_mode=ParseMode.MARKDOWN, reply_markup=key)
+
+
 def load():
     logger.info("Load notif module")
     dp.register_message_handler(notif_cmd, lambda msg: msg.text.lower() == "notif")
     dp.register_callback_query_handler(notif_query, posts_cb.filter(action=["toggle", "time", "cooldown"]))
+    dp.register_message_handler(await_cmd, lambda msg: have_await_cmd(msg))
 
 
 def unload():
     logger.info("Unload notif module")
     dp.message_handlers.unregister(notif_cmd)
     dp.callback_query_handlers.unregister(notif_query)
+    dp.message_handlers.unregister(await_cmd)

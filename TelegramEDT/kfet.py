@@ -16,6 +16,12 @@ def get_now():
     return datetime.datetime.now(datetime.timezone.utc).astimezone(tz=None)
 
 
+def have_await_cmd(msg: types.Message):
+    with dbL:
+        user = session.query(User).filter_by(id=msg.from_user.id).first()
+        return user and user.await_cmd == "setkfet"
+
+
 async def kfet(message: types.Message):
     check_id(message.from_user)
     await message.chat.do(types.ChatActions.TYPING)
@@ -49,13 +55,33 @@ async def kfet_set(message: types.Message):
     await message.reply(msg, parse_mode=ParseMode.MARKDOWN, reply_markup=key)
 
 
+async def await_cmd(message: types.message):
+    check_id(message.from_user)
+    await message.chat.do(types.ChatActions.TYPING)
+    with dbL:
+        user = session.query(User).filter_by(id=message.from_user.id).first()
+        logger.info(f"{message.from_user.username} do awaited command")
+        try:
+            int(message.text)
+        except ValueError:
+            msg = lang(user, "err_num")
+        else:
+            user.kfet = int(message.text)
+            msg = lang(user, "kfet_set")
+        user.await_cmd = str()
+        session.commit()
+    await message.reply(msg, parse_mode=ParseMode.MARKDOWN, reply_markup=key)
+
+
 def load():
     logger.info("Load kfet module")
     dp.register_message_handler(kfet, lambda msg: msg.text.lower() == "kfet")
     dp.register_message_handler(kfet_set, lambda msg: msg.text.lower() == "setkfet")
+    dp.register_message_handler(await_cmd, lambda msg: have_await_cmd(msg))
 
 
 def unload():
     logger.info("Unload kfet module")
     dp.message_handlers.unregister(kfet)
     dp.message_handlers.unregister(kfet_set)
+    dp.message_handlers.unregister(await_cmd)

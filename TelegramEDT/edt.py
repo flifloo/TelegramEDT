@@ -1,14 +1,23 @@
 import hashlib
+import re
 
+import requests
+from PIL import Image
 from aiogram import types
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ParseMode, InputTextMessageContent, \
-    InlineQueryResultArticle, InlineQuery
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, InputTextMessageContent, \
+    InlineQueryResultArticle, InlineQuery, ContentType
+from aiogram.types import ParseMode
+from ics.parse import ParseError
+from pyzbar.pyzbar import decode
+from requests.exceptions import ConnectionError, InvalidSchema, MissingSchema
 
-from TelegramEDT import dbL, dp, key, logger, posts_cb, session, TIMES, bot, check_id
+from TelegramEDT import API_TOKEN, TIMES, bot, dbL, dp, key, logger, session, check_id, posts_cb
+from TelegramEDT.EDTcalendar import Calendar
 from TelegramEDT.base import User
 from TelegramEDT.lang import lang
 
 logger = logger.getChild("edt")
+re_url = re.compile(r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+")
 
 
 def calendar(time: str, user_id: int):
@@ -26,6 +35,12 @@ def edt_key():
     for i, n in enumerate(["Day", "Next", "Week", "Next week"]):
         keys.add(InlineKeyboardButton(n, callback_data=posts_cb.new(id=i, action=n.lower())))
     return keys
+
+
+def have_await_cmd(msg: types.Message):
+    with dbL:
+        user = session.query(User).filter_by(id=msg.from_user.id).first()
+        return user and user.await_cmd == "setedt"
 
 
 async def edt_cmd(message: types.Message):
@@ -69,6 +84,41 @@ async def edt_await(message: types.Message):
     await message.reply(lang(user, "setedt_wait"), parse_mode=ParseMode.MARKDOWN, reply_markup=key)
 
 
+async def await_cmd(message: types.message):
+    check_id(message.from_user)
+    await message.chat.do(types.ChatActions.TYPING)
+    with dbL:
+        user = session.query(User).filter_by(id=message.from_user.id).first()
+        logger.info(f"{message.from_user.username} do edt awaited command")
+        url = str()
+        if message.photo:
+            file_path = await bot.get_file(message.photo[0].file_id)
+            file_url = f"https://api.telegram.org/file/bot{API_TOKEN}/{file_path['file_path']}"
+            qr = decode(Image.open(requests.get(file_url, stream=True).raw))
+            if qr:
+                url = str(qr[0].data)
+        elif message.text:
+            msg_url = re_url.findall(message.text)
+            if msg_url:
+                url = msg_url[0]
+
+        if url:
+            resources = url[url.find("resources") + 10:][:4]
+        elif message.text:
+            resources = message.text
+
+        try:
+            Calendar("", int(resources))
+        except (ParseError, ConnectionError, InvalidSchema, MissingSchema, ValueError, UnboundLocalError):
+            msg = lang(user, "setedt_err_res")
+        else:
+            user.resources = int(resources)
+            msg = lang(user, "setedt")
+        user.await_cmd = str()
+        session.commit()
+    await message.reply(msg, parse_mode=ParseMode.MARKDOWN, reply_markup=key)
+
+
 async def edt_geturl(message: types.Message):
     check_id(message.from_user)
     await message.chat.do(types.ChatActions.TYPING)
@@ -87,6 +137,8 @@ def load():
     dp.register_inline_handler(inline_edt)
     dp.register_callback_query_handler(edt_query, posts_cb.filter(action=["day", "next", "week", "next week"]))
     dp.register_message_handler(edt_await, lambda msg: msg.text.lower() == "setedt")
+    dp.register_message_handler(await_cmd, lambda msg: have_await_cmd(msg), content_types=[ContentType.TEXT,
+                                                                                           ContentType.PHOTO])
     dp.register_message_handler(edt_geturl, commands="getedt")
 
 
@@ -96,4 +148,5 @@ def unload():
     dp.inline_query_handlers.unregister(inline_edt)
     dp.callback_query_handlers.unregister(edt_query)
     dp.message_handlers.unregister(edt_await)
+    dp.message_handlers.unregister(await_cmd)
     dp.message_handlers.unregister(edt_geturl)
