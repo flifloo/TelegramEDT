@@ -4,9 +4,11 @@ from os.path import getmtime, isfile
 import ics
 import requests
 from aiogram.utils import markdown
+from ics.parse import ParseError, string_to_container
 from ics.timeline import Timeline
 
 URL = "http://adelb.univ-lyon1.fr/jsp/custom/modules/plannings/anonymous_cal.jsp"
+EMPTY_CALENDAR = "BEGIN:VCALENDAR\r\nPRODID:ics.py - http://git.io/lLljaA\r\nVERSION:2.0\r\nEND:VCALENDAR"
 
 
 class Calendar(ics.Calendar):
@@ -39,7 +41,14 @@ class Calendar(ics.Calendar):
         name = f"calendars/{resources}-{projectid}.ical"
         now = self._now().timestamp()
         if not isfile(name) or now-getmtime(name) < now-360:
-            open(name, "w").write(requests.get(self._url(url, resources, projectid)).text)
+            try:
+                calendar = requests.get(self._url(url, resources, projectid)).text
+                string_to_container(calendar)
+            except (ParseError, requests.exceptions.ConnectionError, requests.exceptions.ConnectTimeout):
+                if not isfile(name):
+                    open(name, "w").write(EMPTY_CALENDAR)
+            else:
+                open(name, "w").write(calendar)
         return open(name, "r").read()
 
     def _events(self, time: str, pass_week: bool):
