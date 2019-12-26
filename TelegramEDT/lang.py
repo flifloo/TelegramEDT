@@ -1,5 +1,6 @@
 import json
-from base import User
+
+from TelegramEDT.base import User
 
 LANG = ["en"]
 

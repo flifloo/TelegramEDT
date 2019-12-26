@@ -9,8 +9,7 @@ logs/
 calendars/
 
 # Bot private
-edt
-edt.*
+edt.db
 token.ini
 
 # PyCharm

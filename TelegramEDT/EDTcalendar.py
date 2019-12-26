@@ -1,9 +1,10 @@
 import datetime
+from os.path import getmtime, isfile
+
 import ics
 import requests
-from ics.timeline import Timeline
 from aiogram.utils import markdown
-from os.path import getmtime, isfile
+from ics.timeline import Timeline
 
 URL = "http://adelb.univ-lyon1.fr/jsp/custom/modules/plannings/anonymous_cal.jsp"
 

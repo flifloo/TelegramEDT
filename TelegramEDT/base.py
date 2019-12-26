@@ -1,9 +1,11 @@
 import datetime
+
 import requests
-from EDTcalendar import Calendar
 from feedparser import parse
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String, Boolean, Date
+from sqlalchemy.ext.declarative import declarative_base
+
+from TelegramEDT.EDTcalendar import Calendar
 
 KFET_URL = "http://kfet.bdeinfo.org/orders"
 Base = declarative_base()
