@@ -3,7 +3,7 @@ from aiogram.types import ParseMode
 from aiogram.utils import markdown
 from aiogram.utils.exceptions import MessageIsTooLong
 
-from TelegramEDT import ADMIN_ID, bot, dbL, key, log_date, logger, session, check_id
+from TelegramEDT import ADMIN_ID, bot, dbL, dp, key, log_date, logger, session, check_id
 from TelegramEDT.base import User
 
 
@@ -79,3 +79,21 @@ async def errors(*args, **partial_data):
         sep="\n"
     )
     await bot.send_message(ADMIN_ID, msg, parse_mode=ParseMode.MARKDOWN)
+
+
+def load():
+    logger.info("Load tools module")
+    dp.register_message_handler(get_id, commands="getid")
+    dp.register_message_handler(get_logs, commands="getlogs")
+    dp.register_message_handler(get_db, commands="getdb")
+    dp.register_message_handler(eval_cmd, commands="eval")
+    dp.register_errors_handler(errors)
+
+
+def unload():
+    logger.info("Unload tools module")
+    dp.message_handlers.unregister(get_id)
+    dp.message_handlers.unregister(get_logs)
+    dp.message_handlers.unregister(get_db)
+    dp.message_handlers.unregister(eval_cmd)
+    dp.errors_handlers.unregister(errors)

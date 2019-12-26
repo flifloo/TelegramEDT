@@ -1,7 +1,7 @@
 from aiogram import types
 from aiogram.types import ParseMode
 
-from TelegramEDT import dbL, key, logger, session, check_id
+from TelegramEDT import dbL, dp, key, logger, session, check_id
 from TelegramEDT.base import User
 from TelegramEDT.lang import lang
 
@@ -16,3 +16,13 @@ async def settomuss(message: types.Message):
         session.commit()
 
     await message.reply(lang(user, "settomuss_wait"), parse_mode=ParseMode.MARKDOWN, reply_markup=key)
+
+
+def load():
+    logger.info("Load tomuss module")
+    dp.register_message_handler(settomuss, lambda msg: msg.text.lower() == "settomuss")
+
+
+def unload():
+    logger.info("Unload tomuss module")
+    dp.message_handlers.unregister(settomuss)

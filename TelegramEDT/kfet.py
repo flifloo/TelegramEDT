@@ -5,7 +5,7 @@ from aiogram import types
 from aiogram.types import ParseMode
 from aiogram.utils import markdown
 
-from TelegramEDT import dbL, key, logger, session, check_id
+from TelegramEDT import dbL, dp, key, logger, session, check_id
 from TelegramEDT.base import User, KFET_URL
 from TelegramEDT.lang import lang
 
@@ -45,3 +45,15 @@ async def kfet_set(message: types.Message):
             session.commit()
 
     await message.reply(msg, parse_mode=ParseMode.MARKDOWN, reply_markup=key)
+
+
+def load():
+    logger.info("Load kfet module")
+    dp.register_message_handler(kfet, lambda msg: msg.text.lower() == "kfet")
+    dp.register_message_handler(kfet_set, lambda msg: msg.text.lower() == "setkfet")
+
+
+def unload():
+    logger.info("Unload kfet module")
+    dp.message_handlers.unregister(kfet)
+    dp.message_handlers.unregister(kfet_set)

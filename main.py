@@ -2,7 +2,7 @@ import asyncio
 
 from aiogram.utils import executor
 
-from TelegramEDT import notif, dp
+from TelegramEDT.notif import notif, dp
 
 loop = asyncio.get_event_loop()
 loop.create_task(notif())

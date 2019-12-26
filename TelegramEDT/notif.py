@@ -4,7 +4,7 @@ from aiogram import types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ParseMode
 from aiogram.utils import markdown
 
-from TelegramEDT import bot, dbL, logger, posts_cb, session, check_id
+from TelegramEDT import bot, dbL, dp, logger, posts_cb, session, check_id
 from TelegramEDT.base import User
 from TelegramEDT.lang import lang
 
@@ -81,3 +81,15 @@ async def notif_query(query: types.CallbackQuery, callback_data: dict):
         session.commit()
 
     await query.message.reply(msg, parse_mode=ParseMode.MARKDOWN)
+
+
+def load():
+    logger.info("Load notif module")
+    dp.register_message_handler(notif_cmd, lambda msg: msg.text.lower() == "notif")
+    dp.register_callback_query_handler(notif_query, posts_cb.filter(action=["toggle", "time", "cooldown"]))
+
+
+def unload():
+    logger.info("Unload notif module")
+    dp.message_handlers.unregister(notif_cmd)
+    dp.callback_query_handlers.unregister(notif_query)

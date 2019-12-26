@@ -3,13 +3,13 @@ import re
 import requests
 from PIL import Image
 from aiogram import types
-from aiogram.types import ParseMode
+from aiogram.types import ParseMode, ContentType
 from feedparser import parse
 from ics.parse import ParseError
 from pyzbar.pyzbar import decode
 from requests.exceptions import ConnectionError, InvalidSchema, MissingSchema
 
-from TelegramEDT import API_TOKEN, bot, dbL, key, logger, session, check_id
+from TelegramEDT import API_TOKEN, bot, dbL, dp, key, logger, session, check_id
 from TelegramEDT.EDTcalendar import Calendar
 from TelegramEDT.base import User
 from TelegramEDT.lang import lang
@@ -91,3 +91,14 @@ async def await_cmd(message: types.message):
 
     if msg:
         await message.reply(msg, parse_mode=ParseMode.MARKDOWN, reply_markup=key)
+
+
+def load():
+    logger.info("Load await_cmd module")
+    dp.register_message_handler(await_cmd, lambda msg: have_await_cmd(msg),content_types=[ContentType.TEXT,
+                                                                                          ContentType.PHOTO])
+
+
+def unload():
+    logger.info("Unload await_cmd module")
+    dp.message_handlers.unregister(await_cmd)

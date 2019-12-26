@@ -4,7 +4,7 @@ from aiogram import types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ParseMode, InputTextMessageContent, \
     InlineQueryResultArticle, InlineQuery
 
-from TelegramEDT import dbL, key, logger, posts_cb, session, TIMES, bot, check_id
+from TelegramEDT import dbL, dp, key, logger, posts_cb, session, TIMES, bot, check_id
 from TelegramEDT.base import User
 from TelegramEDT.lang import lang
 
@@ -77,3 +77,21 @@ async def edt_geturl(message: types.Message):
             await message.reply(user.resources, reply_markup=key)
         else:
             await message.reply(lang(user, "getedt_err"), reply_markup=key)
+
+
+def load():
+    logger.info("Load edt module")
+    dp.register_message_handler(edt_cmd, lambda msg: msg.text.lower() == "edt")
+    dp.register_inline_handler(inline_edt)
+    dp.register_callback_query_handler(edt_query, posts_cb.filter(action=["day", "next", "week", "next week"]))
+    dp.register_message_handler(edt_await, lambda msg: msg.text.lower() == "setedt")
+    dp.register_message_handler(edt_geturl, commands="getedt")
+
+
+def unload():
+    logger.info("Unload edt module")
+    dp.message_handlers.unregister(edt_cmd)
+    dp.inline_query_handlers.unregister(inline_edt)
+    dp.callback_query_handlers.unregister(edt_query)
+    dp.message_handlers.unregister(edt_await)
+    dp.message_handlers.unregister(edt_geturl)
