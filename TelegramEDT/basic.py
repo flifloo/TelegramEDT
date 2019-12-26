@@ -5,6 +5,8 @@ from TelegramEDT import dbL, dp, key, logger, session, check_id
 from TelegramEDT.base import User
 from TelegramEDT.lang import lang
 
+logger = logger.getChild("basic")
+
 
 async def start(message: types.Message):
     check_id(message.from_user)

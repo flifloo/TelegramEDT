@@ -8,6 +8,8 @@ from TelegramEDT import dbL, dp, key, logger, posts_cb, session, TIMES, bot, che
 from TelegramEDT.base import User
 from TelegramEDT.lang import lang
 
+logger = logger.getChild("edt")
+
 
 def calendar(time: str, user_id: int):
     with dbL:

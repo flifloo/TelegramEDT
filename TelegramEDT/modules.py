@@ -4,6 +4,8 @@ from aiogram.types import Message
 
 from TelegramEDT import ADMIN_ID, logger
 
+logger = logger.getChild("modules")
+
 
 def load_module(module: str) -> bool:
     try:

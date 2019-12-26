@@ -6,6 +6,8 @@ from aiogram.utils.exceptions import MessageIsTooLong
 from TelegramEDT import ADMIN_ID, bot, dbL, dp, key, log_date, logger, session, check_id
 from TelegramEDT.base import User
 
+logger = logger.getChild("tools")
+
 
 async def get_id(message: types.Message):
     check_id(message.from_user)

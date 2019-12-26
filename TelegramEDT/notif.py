@@ -8,6 +8,8 @@ from TelegramEDT import bot, dbL, dp, logger, posts_cb, session, check_id
 from TelegramEDT.base import User
 from TelegramEDT.lang import lang
 
+logger = logger.getChild("notif")
+
 
 async def notif():
     while True:

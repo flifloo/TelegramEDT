@@ -9,6 +9,8 @@ from TelegramEDT import dbL, dp, key, logger, session, check_id
 from TelegramEDT.base import User, KFET_URL
 from TelegramEDT.lang import lang
 
+logger = logger.getChild("kfet")
+
 
 def get_now():
     return datetime.datetime.now(datetime.timezone.utc).astimezone(tz=None)
