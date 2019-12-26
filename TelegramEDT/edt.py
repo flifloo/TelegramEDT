@@ -7,7 +7,7 @@ from aiogram import types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, InputTextMessageContent, \
     InlineQueryResultArticle, InlineQuery, ContentType
 from aiogram.types import ParseMode
-from ics.parse import ParseError
+from ics.parse import ParseError, string_to_container
 from pyzbar.pyzbar import decode
 from requests.exceptions import ConnectionError, InvalidSchema, MissingSchema
 
@@ -108,7 +108,8 @@ async def await_cmd(message: types.message):
             resources = message.text
 
         try:
-            Calendar("", int(resources))
+            string_to_container(requests.get(Calendar("", int(resources)).url).text)
+
         except (ParseError, ConnectionError, InvalidSchema, MissingSchema, ValueError, UnboundLocalError):
             msg = lang(user, "setedt_err_res")
         else:

@@ -13,7 +13,8 @@ EMPTY_CALENDAR = "BEGIN:VCALENDAR\r\nPRODID:ics.py - http://git.io/lLljaA\r\nVER
 
 class Calendar(ics.Calendar):
     def __init__(self, time: str, resources: int, url: str = URL, projectid: int = 4, pass_week: bool = True):
-        super().__init__(self._get_calendar(url, resources, projectid))
+        self.url = self._url(url, resources, projectid)
+        super().__init__(self._get_calendar(resources, projectid))
         self.events = self._events(time, pass_week)
         self.timeline = Timeline(self)
 
@@ -37,12 +38,12 @@ class Calendar(ics.Calendar):
         lastdate = now.date() + datetime.timedelta(days=7+(7-now.isoweekday()))
         return f"{url}?resources={resources}&projectId={projectid}&calType=ical&firstDate={firstdate}&lastDate={lastdate}"
 
-    def _get_calendar(self, url: str, resources: int, projectid: int):
+    def _get_calendar(self, resources: int, projectid: int):
         name = f"calendars/{resources}-{projectid}.ical"
         now = self._now().timestamp()
         if not isfile(name) or now-getmtime(name) < now-360:
             try:
-                calendar = requests.get(self._url(url, resources, projectid)).text
+                calendar = requests.get(self.url).text
                 string_to_container(calendar)
             except (ParseError, requests.exceptions.ConnectionError, requests.exceptions.ConnectTimeout):
                 if not isfile(name):
