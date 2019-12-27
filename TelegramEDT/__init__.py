@@ -11,7 +11,6 @@ from TelegramEDT.EDTcalendar import Calendar
 from TelegramEDT.base import Base, User
 from TelegramEDT.lang import lang
 from TelegramEDT.logger import logger
-from TelegramEDT.modules import load_module, load_cmd, unload_cmd
 
 if not isfile("token.ini"):
     logger.critical("No token specified, impossible to start the bot !")
@@ -47,10 +46,8 @@ def check_id(user: types.User):
             session.commit()
 
 
-dp.register_message_handler(load_cmd, commands="load")
-dp.register_message_handler(unload_cmd, commands="unload")
-
 logger.info("Start loading modules")
-for m in ["basic", "edt", "kfet", "tomuss", "notif", "tools"]:
+from TelegramEDT.modules import load_module
+for m in ["modules", "basic", "edt", "kfet", "tomuss", "notif", "tools"]:
     load_module(m)
 logger.info("Modules loading finish")

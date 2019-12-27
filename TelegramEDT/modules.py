@@ -2,7 +2,7 @@ from importlib import import_module
 
 from aiogram.types import Message
 
-from TelegramEDT import ADMIN_ID, logger
+from TelegramEDT import ADMIN_ID, dp, logger
 
 logger = logger.getChild("modules")
 
@@ -59,3 +59,15 @@ async def unload_cmd(message: Message):
             msg = f"Fail to unload module {module} !"
 
         await message.reply(msg)
+
+
+def load():
+    logger.info("Load modules module")
+    dp.register_message_handler(load_cmd, commands="load")
+    dp.register_message_handler(unload_cmd, commands="unload")
+
+
+def unload():
+    logger.info("Unload tools module")
+    dp.message_handlers.unregister(load_cmd)
+    dp.message_handlers.unregister(unload_cmd)
