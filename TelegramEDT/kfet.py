@@ -32,10 +32,14 @@ async def kfet(message: types.Message):
             msg = lang(user, "kfet_close")
         else:
             msg = lang(user, "kfet_list")
-            cmds = requests.get(KFET_URL).json()
-            if cmds:
-                for c in cmds:
-                    msg += markdown.code(c) + " " if cmds[c] == "ok" else ""
+            try:
+                cmds = requests.get(KFET_URL).json()
+            except (requests.exceptions.ConnectionError, requests.exceptions.ConnectTimeout):
+                msg = markdown.bold(lang(user, "kfet_error"))
+            else:
+                if cmds:
+                    for c in cmds:
+                        msg += markdown.code(c) + " " if cmds[c] == "ok" else ""
     await message.reply(msg, parse_mode=ParseMode.MARKDOWN, reply_markup=key)
 
 

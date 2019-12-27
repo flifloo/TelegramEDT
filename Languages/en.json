@@ -9,6 +9,7 @@
   "setedt_wait": "Send a QR code, resource number or the url of the calendar !",
   "notif_event": "\uD83D\uDD14An event is coming !\n",
   "kfet": "\uD83D\uDD14Your command is ready !",
+  "kfet_error": "Cant connect to server !",
   "kfet_prb": "\u26A0Your command got a problem, go check whats happening",
   "kfet_err": "\u274CYour order is not out",
   "kfet_list": "\uD83D\uDDD2Kfet commands ready:\n",
