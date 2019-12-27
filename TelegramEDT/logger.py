@@ -1,5 +1,10 @@
 import logging
 from logging import handlers
+from os import mkdir
+from os.path import isdir
+
+if not isdir("logs"):
+    mkdir("logs")
 
 log_format = "{%(levelname)s}[%(asctime)s]: %(name)s | %(message)s"
 

@@ -1,7 +1,4 @@
-import datetime
-import logging
-from os import mkdir
-from os.path import isdir, isfile
+from os.path import isfile
 from threading import RLock
 
 from aiogram import Bot, Dispatcher, types
@@ -14,14 +11,7 @@ from TelegramEDT.EDTcalendar import Calendar
 from TelegramEDT.base import Base, User
 from TelegramEDT.lang import lang
 from TelegramEDT.logger import logger
-
-tables = False
-if not isdir("logs"):
-    mkdir("logs")
-if not isdir("calendars"):
-    mkdir("calendars")
-if not isfile("edt.db"):
-    tables = True
+from TelegramEDT.modules import load_module, load_cmd, unload_cmd
 
 if not isfile("token.ini"):
     logger.critical("No token specified, impossible to start the bot !")
@@ -36,7 +26,7 @@ dp = Dispatcher(bot)
 engine = create_engine("sqlite:///edt.db")
 Session = sessionmaker(bind=engine)
 session = Session()
-if tables:
+if not isfile("edt.db"):
     Base.metadata.create_all(engine)
 dbL = RLock()
 
@@ -57,7 +47,6 @@ def check_id(user: types.User):
             session.commit()
 
 
-from TelegramEDT.modules import load_module, load_cmd, unload_cmd
 dp.register_message_handler(load_cmd, commands="load")
 dp.register_message_handler(unload_cmd, commands="unload")
 

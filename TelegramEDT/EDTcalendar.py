@@ -1,11 +1,16 @@
 import datetime
-from os.path import getmtime, isfile
+from os import mkdir
+from os.path import getmtime, isfile, isdir
 
 import ics
 import requests
 from aiogram.utils import markdown
 from ics.parse import ParseError, string_to_container
 from ics.timeline import Timeline
+
+
+if not isdir("calendars"):
+    mkdir("calendars")
 
 URL = "http://adelb.univ-lyon1.fr/jsp/custom/modules/plannings/anonymous_cal.jsp"
 EMPTY_CALENDAR = "BEGIN:VCALENDAR\r\nPRODID:ics.py - http://git.io/lLljaA\r\nVERSION:2.0\r\nEND:VCALENDAR"
