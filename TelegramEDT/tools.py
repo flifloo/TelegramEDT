@@ -5,7 +5,7 @@ from aiogram.types import ParseMode
 from aiogram.utils import markdown
 from aiogram.utils.exceptions import MessageIsTooLong
 
-from TelegramEDT import ADMIN_ID, bot, dbL, dp, key, logger, session, check_id
+from TelegramEDT import ADMIN_ID, bot, dp, key, logger, Session, check_id
 from TelegramEDT.base import User
 
 logger = logger.getChild("tools")
@@ -49,7 +49,7 @@ async def get_db(message: types.Message):
     check_id(message.from_user)
     logger.info(f"{message.from_user.username} do getdb command")
     if message.from_user.id == ADMIN_ID:
-        with dbL:
+        with Session as session:
             users = dict()
             for u in session.query(User).all():
                 users[u] = u.__dict__
@@ -75,7 +75,8 @@ async def eval_cmd(message: types.Message):
 
 async def errors(*args, **partial_data):
     if "This Session's transaction has been rolled back due to a previous exception during flush" in args:
-        session.rollback()
+        with Session as session:
+            session.rollback()
     msg = markdown.text(
         markdown.bold("⚠️ An error occurred:"),
         markdown.code(args),

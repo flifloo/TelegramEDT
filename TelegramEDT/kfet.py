@@ -5,7 +5,7 @@ from aiogram import types
 from aiogram.types import ParseMode
 from aiogram.utils import markdown
 
-from TelegramEDT import dbL, dp, key, logger, session, check_id
+from TelegramEDT import dp, key, logger, Session, check_id
 from TelegramEDT.base import User, KFET_URL
 from TelegramEDT.lang import lang
 
@@ -17,7 +17,7 @@ def get_now():
 
 
 def have_await_cmd(msg: types.Message):
-    with dbL:
+    with Session as session:
         user = session.query(User).filter_by(id=msg.from_user.id).first()
         return user and user.await_cmd == "setkfet"
 
@@ -26,7 +26,7 @@ async def kfet(message: types.Message):
     check_id(message.from_user)
     await message.chat.do(types.ChatActions.TYPING)
     logger.info(f"{message.from_user.username} do kfet")
-    with dbL:
+    with Session as session:
         user = session.query(User).filter_by(id=message.from_user.id).first()
         if not 9 < get_now().hour < 14 or not get_now().isoweekday() < 6:
             msg = lang(user, "kfet_close")
@@ -47,7 +47,7 @@ async def kfet_set(message: types.Message):
     check_id(message.from_user)
     await message.chat.do(types.ChatActions.TYPING)
     logger.info(f"{message.from_user.username} do setkfet")
-    with dbL:
+    with Session as session:
         user = session.query(User).filter_by(id=message.from_user.id).first()
         if not 9 < get_now().hour < 14 or not get_now().isoweekday() < 5:
             msg = lang(user, "kfet_close")
@@ -62,7 +62,7 @@ async def kfet_set(message: types.Message):
 async def await_cmd(message: types.message):
     check_id(message.from_user)
     await message.chat.do(types.ChatActions.TYPING)
-    with dbL:
+    with Session as session:
         user = session.query(User).filter_by(id=message.from_user.id).first()
         logger.info(f"{message.from_user.username} do awaited command")
         try:

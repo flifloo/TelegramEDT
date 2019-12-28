@@ -11,7 +11,7 @@ from ics.parse import ParseError, string_to_container
 from pyzbar.pyzbar import decode
 from requests.exceptions import ConnectionError, InvalidSchema, MissingSchema
 
-from TelegramEDT import API_TOKEN, TIMES, bot, dbL, dp, key, logger, session, check_id, posts_cb
+from TelegramEDT import API_TOKEN, TIMES, bot, dp, key, logger, Session, check_id, posts_cb
 from TelegramEDT.EDTcalendar import Calendar
 from TelegramEDT.base import User
 from TelegramEDT.lang import lang
@@ -21,7 +21,7 @@ re_url = re.compile(r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a
 
 
 def calendar(time: str, user_id: int):
-    with dbL:
+    with Session as session:
         user = session.query(User).filter_by(id=user_id).first()
         if not user.resources:
             return lang(user, "edt_err_set")
@@ -38,7 +38,7 @@ def edt_key():
 
 
 def have_await_cmd(msg: types.Message):
-    with dbL:
+    with Session as session:
         user = session.query(User).filter_by(id=msg.from_user.id).first()
         return user and user.await_cmd == "setedt"
 
@@ -76,18 +76,19 @@ async def edt_await(message: types.Message):
     check_id(message.from_user)
     await message.chat.do(types.ChatActions.TYPING)
     logger.info(f"{message.from_user.username} do setedt")
-    with dbL:
+    with Session as session:
         user = session.query(User).filter_by(id=message.from_user.id).first()
         user.await_cmd = "setedt"
         session.commit()
+        msg = lang(user, "setedt_wait")
 
-    await message.reply(lang(user, "setedt_wait"), parse_mode=ParseMode.MARKDOWN, reply_markup=key)
+    await message.reply(msg, parse_mode=ParseMode.MARKDOWN, reply_markup=key)
 
 
 async def await_cmd(message: types.message):
     check_id(message.from_user)
     await message.chat.do(types.ChatActions.TYPING)
-    with dbL:
+    with Session as session:
         user = session.query(User).filter_by(id=message.from_user.id).first()
         logger.info(f"{message.from_user.username} do edt awaited command")
         url = str()
@@ -124,12 +125,14 @@ async def edt_geturl(message: types.Message):
     check_id(message.from_user)
     await message.chat.do(types.ChatActions.TYPING)
     logger.info(f"{message.from_user.username} do getedt command")
-    with dbL:
+    with Session as session:
         user = session.query(User).filter_by(id=message.from_user.id).first()
         if user.resources:
-            await message.reply(user.resources, reply_markup=key)
+            msg = user.resources
         else:
-            await message.reply(lang(user, "getedt_err"), reply_markup=key)
+            msg = lang(user, "getedt_err")
+
+    await message.reply(msg, reply_markup=key)
 
 
 def load():

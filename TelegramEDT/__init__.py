@@ -11,6 +11,7 @@ from TelegramEDT.EDTcalendar import Calendar
 from TelegramEDT.base import Base, User
 from TelegramEDT.lang import lang
 from TelegramEDT.logger import logger
+from TelegramEDT.EDTscoped_session import scoped_session
 
 if not isfile("token.ini"):
     logger.critical("No token specified, impossible to start the bot !")
@@ -23,11 +24,10 @@ bot = Bot(token=API_TOKEN)
 posts_cb = CallbackData("post", "id", "action")
 dp = Dispatcher(bot)
 engine = create_engine("sqlite:///edt.db")
-Session = sessionmaker(bind=engine)
-session = Session()
+session_factory = sessionmaker(bind=engine)
+Session = scoped_session(session_factory)
 if not isfile("edt.db"):
     Base.metadata.create_all(engine)
-dbL = RLock()
 
 key = reply_keyboard.ReplyKeyboardMarkup()
 for k in ["Edt", "Kfet", "Setkfet", "Setedt", "Notif", "Settomuss"]:
@@ -35,7 +35,7 @@ for k in ["Edt", "Kfet", "Setkfet", "Setedt", "Notif", "Settomuss"]:
 
 
 def check_id(user: types.User):
-    with dbL:
+    with Session as session:
         if (user.id,) not in session.query(User.id).all():
             logger.info(f"{user.username} add to the db")
             if user.locale and user.locale.language:

@@ -4,7 +4,7 @@ from aiogram import types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ParseMode
 from aiogram.utils import markdown
 
-from TelegramEDT import bot, dbL, dp, logger, posts_cb, session, check_id, key
+from TelegramEDT import bot, dp, logger, posts_cb, Session, check_id, key
 from TelegramEDT.base import User
 from TelegramEDT.lang import lang
 
@@ -12,14 +12,14 @@ logger = logger.getChild("notif")
 
 
 def have_await_cmd(msg: types.Message):
-    with dbL:
+    with Session as session:
         user = session.query(User).filter_by(id=msg.from_user.id).first()
         return user and user.await_cmd in ["time", "cooldown"]
 
 
 async def notif():
     while True:
-        with dbL:
+        with Session as session:
             for u in session.query(User).all():
                 nt = None
                 kf = None
@@ -62,7 +62,7 @@ async def notif_cmd(message: types.Message):
     keys = InlineKeyboardMarkup()
     for i, n in enumerate(["Toggle", "Time", "Cooldown"]):
         keys.add(InlineKeyboardButton(n, callback_data=posts_cb.new(id=i, action=n.lower())))
-    with dbL:
+    with Session as session:
         user = session.query(User).filter_by(id=message.from_user.id).first()
         msg = lang(user, "notif_info").format(user.nt, user.nt_time, user.nt_cooldown)
     await message.reply(msg, parse_mode=ParseMode.MARKDOWN, reply_markup=keys)
@@ -72,7 +72,7 @@ async def notif_query(query: types.CallbackQuery, callback_data: dict):
     check_id(query.message.from_user)
     await query.message.chat.do(types.ChatActions.TYPING)
     logger.info(f"{query.message.from_user.username} do notif query")
-    with dbL:
+    with Session as session:
         user = session.query(User).filter_by(id=query.from_user.id).first()
         if callback_data["action"] == "toggle":
             if user.nt:
@@ -94,7 +94,7 @@ async def notif_query(query: types.CallbackQuery, callback_data: dict):
 async def await_cmd(message: types.message):
     check_id(message.from_user)
     await message.chat.do(types.ChatActions.TYPING)
-    with dbL:
+    with Session as session:
         user = session.query(User).filter_by(id=message.from_user.id).first()
         logger.info(f"{message.from_user.username} do awaited command")
         try:
