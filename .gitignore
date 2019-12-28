@@ -17,3 +17,6 @@ token.ini
 
 # Alembic
 alembic*
+
+# Debug stuff
+TelegramEDT/test.py
