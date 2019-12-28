@@ -1,8 +1,9 @@
 from aiogram import types
 from aiogram.types import ParseMode
+from aiogram.utils import markdown
 from feedparser import parse
 
-from TelegramEDT import dp, key, logger, Session, check_id, modules
+from TelegramEDT import dp, key, logger, Session, check_id, modules, bot
 from TelegramEDT.base import User
 from TelegramEDT.lang import lang
 
@@ -39,11 +40,32 @@ async def await_cmd(message: types.message):
             msg = lang(user, "settomuss_error")
         else:
             user.tomuss_rss = message.text
+            user.tomuss_last = str()
             msg = lang(user, "settomuss")
         user.await_cmd = str()
         session.commit()
 
     await message.reply(msg, parse_mode=ParseMode.MARKDOWN, reply_markup=key)
+
+
+async def notif():
+    with Session as session:
+        for u in session.query(User).all():
+            try:
+                tm = u.get_tomuss()
+            except Exception as e:
+                logger.error(e)
+            else:
+                if tm:
+                    for i in tm:
+                        msg = markdown.text(
+                            markdown.bold(i.title),
+                            markdown.code(i.summary.replace("<br>", "\n").replace("<b>", "").replace("</b>", "")),
+                            sep="\n"
+                        )
+                        await bot.send_message(u.id, msg, parse_mode=ParseMode.MARKDOWN)
+                    u.tomuss_last = str(i)
+                    session.commit()
 
 
 def load():

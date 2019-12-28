@@ -5,7 +5,7 @@ from aiogram import types
 from aiogram.types import ParseMode
 from aiogram.utils import markdown
 
-from TelegramEDT import dp, key, logger, Session, check_id, modules
+from TelegramEDT import dp, key, logger, Session, check_id, modules, bot
 from TelegramEDT.base import User, KFET_URL
 from TelegramEDT.lang import lang
 
@@ -76,6 +76,24 @@ async def await_cmd(message: types.message):
         user.await_cmd = str()
         session.commit()
     await message.reply(msg, parse_mode=ParseMode.MARKDOWN, reply_markup=key)
+
+
+async def notif():
+    with Session as session:
+        for u in session.query(User).all():
+            try:
+                kf = u.get_kfet()
+            except Exception as e:
+                logger.error(e)
+            else:
+                if kf is not None:
+                    if kf == 1:
+                        kf = lang(u, "kfet")
+                    elif kf == 2:
+                        kf = lang(u, "kfet_prb")
+                    else:
+                        kf = lang(u, "kfet_err")
+                    await bot.send_message(u.id, kf, parse_mode=ParseMode.MARKDOWN)
 
 
 def load():

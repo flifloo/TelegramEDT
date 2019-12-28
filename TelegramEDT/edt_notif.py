@@ -19,36 +19,13 @@ def have_await_cmd(msg: types.Message):
 async def notif():
     with Session as session:
         for u in session.query(User).all():
-            nt = None
-            kf = None
-            tm = None
             try:
                 nt = u.get_notif()
-                kf = u.get_kfet()
-                tm = u.get_tomuss()
             except Exception as e:
                 logger.error(e)
-
-            if nt:
-                await bot.send_message(u.id, lang(u, "notif_event")+str(nt), parse_mode=ParseMode.MARKDOWN)
-            if kf:
-                if kf == 1:
-                    kf = lang(u, "kfet")
-                elif kf == 2:
-                    kf = lang(u, "kfet_prb")
-                else:
-                    kf = lang(u, "kfet_err")
-                await bot.send_message(u.id, kf, parse_mode=ParseMode.MARKDOWN)
-            if tm:
-                for i in tm:
-                    msg = markdown.text(
-                        markdown.bold(i.title),
-                        markdown.code(i.summary.replace("<br>", "\n").replace("<b>", "").replace("</b>", "")),
-                        sep="\n"
-                    )
-                    await bot.send_message(u.id, msg, parse_mode=ParseMode.MARKDOWN)
-                u.tomuss_last = str(i)
-        session.commit()
+            else:
+                if nt:
+                    await bot.send_message(u.id, lang(u, "notif_event")+str(nt), parse_mode=ParseMode.MARKDOWN)
 
 
 async def notif_cmd(message: types.Message):
