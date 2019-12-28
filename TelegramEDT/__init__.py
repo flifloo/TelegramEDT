@@ -33,6 +33,8 @@ key = reply_keyboard.ReplyKeyboardMarkup()
 for k in ["Edt", "Kfet", "Setkfet", "Setedt", "Notif", "Settomuss"]:
     key.add(reply_keyboard.KeyboardButton(k))
 
+modules_active = list()
+
 
 def check_id(user: types.User):
     with Session as session:
@@ -48,7 +50,6 @@ def check_id(user: types.User):
 
 logger.info("Start loading modules")
 from TelegramEDT.modules import load_module
-modules = list()
 for m in ["modules", "basic", "edt", "kfet", "tomuss", "edt_notif", "tools"]:
     load_module(m)
 logger.info("Modules loading finish")

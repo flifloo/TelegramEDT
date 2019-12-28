@@ -5,7 +5,7 @@ from aiogram import types
 from aiogram.types import ParseMode
 from aiogram.utils import markdown
 
-from TelegramEDT import dp, key, logger, Session, check_id, modules, bot
+from TelegramEDT import dp, key, logger, Session, check_id, modules_active, bot
 from TelegramEDT.base import User, KFET_URL
 from TelegramEDT.lang import lang
 
@@ -101,7 +101,7 @@ def load():
     dp.register_message_handler(kfet, lambda msg: msg.text.lower() == "kfet")
     dp.register_message_handler(kfet_set, lambda msg: msg.text.lower() == "setkfet")
     dp.register_message_handler(await_cmd, lambda msg: have_await_cmd(msg))
-    modules.append(module_name)
+    modules_active.append(module_name)
 
 
 def unload():
@@ -109,4 +109,4 @@ def unload():
     dp.message_handlers.unregister(kfet)
     dp.message_handlers.unregister(kfet_set)
     dp.message_handlers.unregister(await_cmd)
-    modules.remove(module_name)
+    modules_active.remove(module_name)

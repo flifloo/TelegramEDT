@@ -1,7 +1,7 @@
 from aiogram import types
 from aiogram.types import ParseMode
 
-from TelegramEDT import dp, key, logger, Session, check_id, modules
+from TelegramEDT import dp, key, logger, Session, check_id, modules_active
 from TelegramEDT.base import User
 from TelegramEDT.lang import lang
 
@@ -35,11 +35,11 @@ def load():
     logger.info(f"Load {module_name} module")
     dp.register_message_handler(start, commands="start")
     dp.register_message_handler(help_cmd, commands="help")
-    modules.append(module_name)
+    modules_active.append(module_name)
 
 
 def unload():
     logger.info(f"Unload {module_name} module")
     dp.message_handlers.unregister(start)
     dp.message_handlers.unregister(help_cmd)
-    modules.remove(module_name)
+    modules_active.remove(module_name)

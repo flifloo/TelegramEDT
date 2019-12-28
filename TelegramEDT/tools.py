@@ -3,7 +3,7 @@ from aiogram.types import ParseMode
 from aiogram.utils import markdown
 from aiogram.utils.exceptions import MessageIsTooLong
 
-from TelegramEDT import ADMIN_ID, bot, dp, key, logger, Session, check_id, modules
+from TelegramEDT import ADMIN_ID, bot, dp, key, logger, Session, check_id, modules_active
 from TelegramEDT.base import User
 
 module_name = "tools"
@@ -92,7 +92,7 @@ def load():
     dp.register_message_handler(get_db, commands="getdb")
     dp.register_message_handler(eval_cmd, commands="eval")
     dp.register_errors_handler(errors)
-    modules.append(module_name)
+    modules_active.append(module_name)
 
 
 def unload():
@@ -102,4 +102,4 @@ def unload():
     dp.message_handlers.unregister(get_db)
     dp.message_handlers.unregister(eval_cmd)
     dp.errors_handlers.unregister(errors)
-    modules.remove(module_name)
+    modules_active.remove(module_name)

@@ -11,7 +11,7 @@ from ics.parse import ParseError, string_to_container
 from pyzbar.pyzbar import decode
 from requests.exceptions import ConnectionError, InvalidSchema, MissingSchema
 
-from TelegramEDT import API_TOKEN, TIMES, bot, dp, key, logger, Session, check_id, posts_cb, modules
+from TelegramEDT import API_TOKEN, TIMES, bot, dp, key, logger, Session, check_id, posts_cb, modules_active
 from TelegramEDT.EDTcalendar import Calendar
 from TelegramEDT.base import User
 from TelegramEDT.lang import lang
@@ -145,7 +145,7 @@ def load():
     dp.register_message_handler(await_cmd, lambda msg: have_await_cmd(msg), content_types=[ContentType.TEXT,
                                                                                            ContentType.PHOTO])
     dp.register_message_handler(edt_geturl, commands="getedt")
-    modules.append(module_name)
+    modules_active.append(module_name)
 
 
 def unload():
@@ -156,4 +156,4 @@ def unload():
     dp.message_handlers.unregister(edt_await)
     dp.message_handlers.unregister(await_cmd)
     dp.message_handlers.unregister(edt_geturl)
-    modules.remove(module_name)
+    modules_active.remove(module_name)

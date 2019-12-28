@@ -2,7 +2,7 @@ from importlib import import_module
 
 from aiogram.types import Message
 
-from TelegramEDT import ADMIN_ID, dp, logger, modules
+from TelegramEDT import ADMIN_ID, dp, logger, modules_active
 
 module_name = "modules"
 logger = logger.getChild(module_name)
@@ -66,11 +66,11 @@ def load():
     logger.info(f"Load {module_name} module")
     dp.register_message_handler(load_cmd, commands="load")
     dp.register_message_handler(unload_cmd, commands="unload")
-    modules.append(module_name)
+    modules_active.append(module_name)
 
 
 def unload():
     logger.info(f"Unload {module_name} module")
     dp.message_handlers.unregister(load_cmd)
     dp.message_handlers.unregister(unload_cmd)
-    modules.remove(module_name)
+    modules_active.remove(module_name)

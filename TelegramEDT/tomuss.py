@@ -3,7 +3,7 @@ from aiogram.types import ParseMode
 from aiogram.utils import markdown
 from feedparser import parse
 
-from TelegramEDT import dp, key, logger, Session, check_id, modules, bot
+from TelegramEDT import dp, key, logger, Session, check_id, modules_active, bot
 from TelegramEDT.base import User
 from TelegramEDT.lang import lang
 
@@ -72,11 +72,11 @@ def load():
     logger.info(f"Load {module_name} module")
     dp.register_message_handler(settomuss, lambda msg: msg.text.lower() == "settomuss")
     dp.register_message_handler(await_cmd, lambda msg: have_await_cmd(msg))
-    modules.append(module_name)
+    modules_active.append(module_name)
 
 
 def unload():
     logger.info(f"Unload {module_name} module")
     dp.message_handlers.unregister(settomuss)
     dp.message_handlers.unregister(await_cmd)
-    modules.remove(module_name)
+    modules_active.remove(module_name)

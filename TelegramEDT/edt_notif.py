@@ -2,7 +2,7 @@ from aiogram import types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ParseMode
 from aiogram.utils import markdown
 
-from TelegramEDT import bot, dp, logger, posts_cb, Session, check_id, key, modules
+from TelegramEDT import bot, dp, logger, posts_cb, Session, check_id, key, modules_active
 from TelegramEDT.base import User
 from TelegramEDT.lang import lang
 
@@ -91,7 +91,7 @@ def load():
     dp.register_message_handler(notif_cmd, lambda msg: msg.text.lower() == "notif")
     dp.register_callback_query_handler(notif_query, posts_cb.filter(action=["toggle", "time", "cooldown"]))
     dp.register_message_handler(await_cmd, lambda msg: have_await_cmd(msg))
-    modules.append(module_name)
+    modules_active.append(module_name)
 
 
 def unload():
@@ -99,4 +99,4 @@ def unload():
     dp.message_handlers.unregister(notif_cmd)
     dp.callback_query_handlers.unregister(notif_query)
     dp.message_handlers.unregister(await_cmd)
-    modules.remove(module_name)
+    modules_active.remove(module_name)
