@@ -107,7 +107,7 @@ async def await_cmd(message: types.message):
             else:
                 user.nt_cooldown = value
 
-            msg = lang(user, "notif_time_cooldown").format(user.await_cmd[6:], value)
+            msg = lang(user, "notif_time_cooldown").format(user.await_cmd, value)
         user.await_cmd = str()
         session.commit()
     await message.reply(msg, parse_mode=ParseMode.MARKDOWN, reply_markup=key)
