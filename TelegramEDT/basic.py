@@ -1,11 +1,12 @@
 from aiogram import types
 from aiogram.types import ParseMode
 
-from TelegramEDT import dp, key, logger, Session, check_id
+from TelegramEDT import dp, key, logger, Session, check_id, modules
 from TelegramEDT.base import User
 from TelegramEDT.lang import lang
 
-logger = logger.getChild("basic")
+module_name = "basic"
+logger = logger.getChild(module_name)
 
 
 async def start(message: types.Message):
@@ -31,12 +32,14 @@ async def help_cmd(message: types.Message):
 
 
 def load():
-    logger.info("Load basic module")
+    logger.info(f"Load {module_name} module")
     dp.register_message_handler(start, commands="start")
     dp.register_message_handler(help_cmd, commands="help")
+    modules.append(module_name)
 
 
 def unload():
-    logger.info("Unload basic module")
+    logger.info(f"Unload {module_name} module")
     dp.message_handlers.unregister(start)
     dp.message_handlers.unregister(help_cmd)
+    modules.remove(module_name)

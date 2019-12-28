@@ -1,14 +1,13 @@
-from asyncio import sleep
-
 from aiogram import types
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ParseMode
 from aiogram.utils import markdown
 
-from TelegramEDT import bot, dp, logger, posts_cb, Session, check_id, key
+from TelegramEDT import bot, dp, logger, posts_cb, Session, check_id, key, modules
 from TelegramEDT.base import User
 from TelegramEDT.lang import lang
 
-logger = logger.getChild("notif")
+module_name = "edt_notif"
+logger = logger.getChild(module_name)
 
 
 def have_await_cmd(msg: types.Message):
@@ -18,41 +17,38 @@ def have_await_cmd(msg: types.Message):
 
 
 async def notif():
-    while True:
-        with Session as session:
-            for u in session.query(User).all():
-                nt = None
-                kf = None
-                tm = None
-                try:
-                    nt = u.get_notif()
-                    kf = u.get_kfet()
-                    tm = u.get_tomuss()
-                except Exception as e:
-                    logger.error(e)
+    with Session as session:
+        for u in session.query(User).all():
+            nt = None
+            kf = None
+            tm = None
+            try:
+                nt = u.get_notif()
+                kf = u.get_kfet()
+                tm = u.get_tomuss()
+            except Exception as e:
+                logger.error(e)
 
-                if nt:
-                    await bot.send_message(u.id, lang(u, "notif_event")+str(nt), parse_mode=ParseMode.MARKDOWN)
-                if kf:
-                    if kf == 1:
-                        kf = lang(u, "kfet")
-                    elif kf == 2:
-                        kf = lang(u, "kfet_prb")
-                    else:
-                        kf = lang(u, "kfet_err")
-                    await bot.send_message(u.id, kf, parse_mode=ParseMode.MARKDOWN)
-                if tm:
-                    for i in tm:
-                        msg = markdown.text(
-                            markdown.bold(i.title),
-                            markdown.code(i.summary.replace("<br>", "\n").replace("<b>", "").replace("</b>", "")),
-                            sep="\n"
-                        )
-                        await bot.send_message(u.id, msg, parse_mode=ParseMode.MARKDOWN)
-                    u.tomuss_last = str(i)
-            session.commit()
-
-        await sleep(60)
+            if nt:
+                await bot.send_message(u.id, lang(u, "notif_event")+str(nt), parse_mode=ParseMode.MARKDOWN)
+            if kf:
+                if kf == 1:
+                    kf = lang(u, "kfet")
+                elif kf == 2:
+                    kf = lang(u, "kfet_prb")
+                else:
+                    kf = lang(u, "kfet_err")
+                await bot.send_message(u.id, kf, parse_mode=ParseMode.MARKDOWN)
+            if tm:
+                for i in tm:
+                    msg = markdown.text(
+                        markdown.bold(i.title),
+                        markdown.code(i.summary.replace("<br>", "\n").replace("<b>", "").replace("</b>", "")),
+                        sep="\n"
+                    )
+                    await bot.send_message(u.id, msg, parse_mode=ParseMode.MARKDOWN)
+                u.tomuss_last = str(i)
+        session.commit()
 
 
 async def notif_cmd(message: types.Message):
@@ -114,14 +110,16 @@ async def await_cmd(message: types.message):
 
 
 def load():
-    logger.info("Load notif module")
+    logger.info(f"Load {module_name} module")
     dp.register_message_handler(notif_cmd, lambda msg: msg.text.lower() == "notif")
     dp.register_callback_query_handler(notif_query, posts_cb.filter(action=["toggle", "time", "cooldown"]))
     dp.register_message_handler(await_cmd, lambda msg: have_await_cmd(msg))
+    modules.append(module_name)
 
 
 def unload():
-    logger.info("Unload notif module")
+    logger.info(f"Unload {module_name} module")
     dp.message_handlers.unregister(notif_cmd)
     dp.callback_query_handlers.unregister(notif_query)
     dp.message_handlers.unregister(await_cmd)
+    modules.remove(module_name)

@@ -5,11 +5,12 @@ from aiogram import types
 from aiogram.types import ParseMode
 from aiogram.utils import markdown
 
-from TelegramEDT import dp, key, logger, Session, check_id
+from TelegramEDT import dp, key, logger, Session, check_id, modules
 from TelegramEDT.base import User, KFET_URL
 from TelegramEDT.lang import lang
 
-logger = logger.getChild("kfet")
+module_name = "kfet"
+logger = logger.getChild(module_name)
 
 
 def get_now():
@@ -78,14 +79,16 @@ async def await_cmd(message: types.message):
 
 
 def load():
-    logger.info("Load kfet module")
+    logger.info(f"Load {module_name} module")
     dp.register_message_handler(kfet, lambda msg: msg.text.lower() == "kfet")
     dp.register_message_handler(kfet_set, lambda msg: msg.text.lower() == "setkfet")
     dp.register_message_handler(await_cmd, lambda msg: have_await_cmd(msg))
+    modules.append(module_name)
 
 
 def unload():
-    logger.info("Unload kfet module")
+    logger.info(f"Unload {module_name} module")
     dp.message_handlers.unregister(kfet)
     dp.message_handlers.unregister(kfet_set)
     dp.message_handlers.unregister(await_cmd)
+    modules.remove(module_name)

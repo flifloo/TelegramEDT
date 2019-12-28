@@ -48,6 +48,7 @@ def check_id(user: types.User):
 
 logger.info("Start loading modules")
 from TelegramEDT.modules import load_module
-for m in ["modules", "basic", "edt", "kfet", "tomuss", "notif", "tools"]:
+modules = list()
+for m in ["modules", "basic", "edt", "kfet", "tomuss", "edt_notif", "tools"]:
     load_module(m)
 logger.info("Modules loading finish")

@@ -1,14 +1,13 @@
-import datetime
-
 from aiogram import types
 from aiogram.types import ParseMode
 from aiogram.utils import markdown
 from aiogram.utils.exceptions import MessageIsTooLong
 
-from TelegramEDT import ADMIN_ID, bot, dp, key, logger, Session, check_id
+from TelegramEDT import ADMIN_ID, bot, dp, key, logger, Session, check_id, modules
 from TelegramEDT.base import User
 
-logger = logger.getChild("tools")
+module_name = "tools"
+logger = logger.getChild(module_name)
 
 
 async def get_id(message: types.Message):
@@ -87,18 +86,20 @@ async def errors(*args, **partial_data):
 
 
 def load():
-    logger.info("Load tools module")
+    logger.info(f"Load {module_name} module")
     dp.register_message_handler(get_id, commands="getid")
     dp.register_message_handler(get_logs, commands="getlogs")
     dp.register_message_handler(get_db, commands="getdb")
     dp.register_message_handler(eval_cmd, commands="eval")
     dp.register_errors_handler(errors)
+    modules.append(module_name)
 
 
 def unload():
-    logger.info("Unload tools module")
+    logger.info(f"Unload {module_name} module")
     dp.message_handlers.unregister(get_id)
     dp.message_handlers.unregister(get_logs)
     dp.message_handlers.unregister(get_db)
     dp.message_handlers.unregister(eval_cmd)
     dp.errors_handlers.unregister(errors)
+    modules.remove(module_name)

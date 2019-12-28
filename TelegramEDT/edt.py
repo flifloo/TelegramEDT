@@ -11,12 +11,13 @@ from ics.parse import ParseError, string_to_container
 from pyzbar.pyzbar import decode
 from requests.exceptions import ConnectionError, InvalidSchema, MissingSchema
 
-from TelegramEDT import API_TOKEN, TIMES, bot, dp, key, logger, Session, check_id, posts_cb
+from TelegramEDT import API_TOKEN, TIMES, bot, dp, key, logger, Session, check_id, posts_cb, modules
 from TelegramEDT.EDTcalendar import Calendar
 from TelegramEDT.base import User
 from TelegramEDT.lang import lang
 
-logger = logger.getChild("edt")
+module_name = "edt"
+logger = logger.getChild(module_name)
 re_url = re.compile(r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+")
 
 
@@ -136,7 +137,7 @@ async def edt_geturl(message: types.Message):
 
 
 def load():
-    logger.info("Load edt module")
+    logger.info(f"Load {module_name} module")
     dp.register_message_handler(edt_cmd, lambda msg: msg.text.lower() == "edt")
     dp.register_inline_handler(inline_edt)
     dp.register_callback_query_handler(edt_query, posts_cb.filter(action=["day", "next", "week", "next week"]))
@@ -144,13 +145,15 @@ def load():
     dp.register_message_handler(await_cmd, lambda msg: have_await_cmd(msg), content_types=[ContentType.TEXT,
                                                                                            ContentType.PHOTO])
     dp.register_message_handler(edt_geturl, commands="getedt")
+    modules.append(module_name)
 
 
 def unload():
-    logger.info("Unload edt module")
+    logger.info(f"Unload {module_name} module")
     dp.message_handlers.unregister(edt_cmd)
     dp.inline_query_handlers.unregister(inline_edt)
     dp.callback_query_handlers.unregister(edt_query)
     dp.message_handlers.unregister(edt_await)
     dp.message_handlers.unregister(await_cmd)
     dp.message_handlers.unregister(edt_geturl)
+    modules.remove(module_name)

@@ -2,11 +2,12 @@ from aiogram import types
 from aiogram.types import ParseMode
 from feedparser import parse
 
-from TelegramEDT import dp, key, logger, Session, check_id
+from TelegramEDT import dp, key, logger, Session, check_id, modules
 from TelegramEDT.base import User
 from TelegramEDT.lang import lang
 
-logger = logger.getChild("tomuss")
+module_name = "tomuss"
+logger = logger.getChild(module_name)
 
 
 def have_await_cmd(msg: types.Message):
@@ -46,12 +47,14 @@ async def await_cmd(message: types.message):
 
 
 def load():
-    logger.info("Load tomuss module")
+    logger.info(f"Load {module_name} module")
     dp.register_message_handler(settomuss, lambda msg: msg.text.lower() == "settomuss")
     dp.register_message_handler(await_cmd, lambda msg: have_await_cmd(msg))
+    modules.append(module_name)
 
 
 def unload():
-    logger.info("Unload tomuss module")
+    logger.info(f"Unload {module_name} module")
     dp.message_handlers.unregister(settomuss)
     dp.message_handlers.unregister(await_cmd)
+    modules.remove(module_name)
