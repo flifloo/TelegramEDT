@@ -2,7 +2,7 @@ import datetime
 
 import requests
 from feedparser import parse
-from sqlalchemy import Column, Integer, String, Boolean, Date
+from sqlalchemy import Column, Integer, String, Boolean, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 
 from TelegramEDT.EDTcalendar import Calendar
@@ -23,7 +23,7 @@ class User(Base):
     nt = Column(Boolean, default=False)
     nt_time = Column(Integer, default=20)
     nt_cooldown = Column(Integer, default=20)
-    nt_last = Column(Date, default=get_now)
+    nt_last = Column(DateTime, default=get_now)
     kfet = Column(Integer, default=0)
     await_cmd = Column(String, default="")
     tomuss_rss = Column(String)
@@ -38,7 +38,7 @@ class User(Base):
             c = self.calendar(pass_week=False)
             for e in c.timeline:
                 if 0 < (e.begin - now).total_seconds() // 60 <= self.nt_time and \
-                        0 < (now - self.nt_last).total_seconds() // 60 >= self.nt_cooldown:
+                        0 < (now.replace(tzinfo=None) - self.nt_last).total_seconds() // 60 >= self.nt_cooldown:
                     self.nt_last = get_now()
                     return e
             return None

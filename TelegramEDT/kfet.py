@@ -94,6 +94,7 @@ async def notif():
                     else:
                         kf = lang(u, "kfet_err")
                     await bot.send_message(u.id, kf, parse_mode=ParseMode.MARKDOWN)
+                    session.commit()
 
 
 def load():
