@@ -26,6 +26,7 @@ async def notif():
             else:
                 if nt:
                     await bot.send_message(u.id, lang(u, "notif_event")+str(nt), parse_mode=ParseMode.MARKDOWN)
+        session.commit()
 
 
 async def notif_cmd(message: types.Message):
